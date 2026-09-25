@@ -1,1 +1,5 @@
 /exported_files
+/node_modules
+/dist
+/public/data
+/.npm-cache
