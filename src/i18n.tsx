@@ -30,7 +30,7 @@ const ko = {
   swap: '출발·도착 바꾸기 ↕', samePlace: '출발지와 도착지가 같습니다.', calculating: '경로 계산 중…', findRoute: '경로 찾기',
   showVehicle: '차량 경로 지도에 표시', showTransit: '대중교통 경로 지도에 표시',
   minutes: '{count}분', routeSummary: '도로 중심선 {count}개 구간 · 접근 {distance}m',
-  vehicleAccessFailed: '출발지 또는 도착지에서 150m 이내 도로를 찾지 못했습니다.',
+  vehicleAccessFailed: '출발지 또는 도착지에서 250m 이내 도로를 찾지 못했습니다.',
   vehicleDisconnected: '통행 방향을 따르는 연결 경로를 찾지 못했습니다.',
   vehicleNote: '예상 시간 · 교통상황 미반영 · 도로 속도 제한의 80% 적용',
   transfers: '환승 {count}회', walk: '도보 {distance}m', wait: '대기 {minutes}분',
@@ -90,7 +90,7 @@ const en: Record<keyof typeof ko, string> = {
   swap: 'Swap origin and destination ↕', samePlace: 'Origin and destination are the same.', calculating: 'Calculating route…', findRoute: 'Find route',
   showVehicle: 'Show driving route on map', showTransit: 'Show transit route on map',
   minutes: '{count} min', routeSummary: '{count} road segments · {distance}m access',
-  vehicleAccessFailed: 'No road found within 150m of the origin or destination.',
+  vehicleAccessFailed: 'No road found within 250m of the origin or destination.',
   vehicleDisconnected: 'No connected route found in the allowed travel direction.',
   vehicleNote: 'Estimated time · traffic excluded · 80% of road speed limits',
   transfers: '{count} transfers', walk: 'Walk {distance}m', wait: 'Wait {minutes} min',
@@ -130,7 +130,7 @@ type I18n = { language: Language; setLanguage: (language: Language) => void; t: 
 const Context = createContext<I18n | null>(null)
 
 function initialLanguage(): Language {
-  try { return window.localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'ko' } catch { return 'ko' }
+  try { return window.localStorage.getItem(STORAGE_KEY) === 'ko' ? 'ko' : 'en' } catch { return 'en' }
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
