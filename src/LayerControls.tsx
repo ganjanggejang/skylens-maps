@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { GROUPS, TOGGLEABLE_GROUPS, type GroupId, type Visibility } from './layers'
 import type { Counts, SourceStates } from './Sidebar'
+import { useI18n, localizeKnownError } from './i18n'
 
 type LayerMenu = 'map' | 'transport'
 type Props = {
@@ -14,6 +15,7 @@ const TRANSPORT_GROUPS = ['bus', 'train', 'tram', 'subway', 'ship', 'ferry', 'ai
 const MAP_GROUPS = TOGGLEABLE_GROUPS.filter(id => !TRANSPORT_GROUPS.includes(id as typeof TRANSPORT_GROUPS[number]))
 
 export function LayerControls({ counts, sourceStates, visibility, onToggle }: Props) {
+  const { t, number } = useI18n()
   const [open, setOpen] = useState<LayerMenu | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -37,15 +39,15 @@ export function LayerControls({ counts, sourceStates, visibility, onToggle }: Pr
     <div className="map-layer-buttons">
       <button type="button" className={open === 'map' ? 'is-active' : ''}
         aria-controls={open === 'map' ? 'map-layer-menu' : undefined} aria-expanded={open === 'map'}
-        onClick={() => setOpen(previous => previous === 'map' ? null : 'map')}>레이어</button>
+        onClick={() => setOpen(previous => previous === 'map' ? null : 'map')}>{t('layers')}</button>
       <button type="button" className={open === 'transport' ? 'is-active' : ''}
         aria-controls={open === 'transport' ? 'transport-layer-menu' : undefined} aria-expanded={open === 'transport'}
-        onClick={() => setOpen(previous => previous === 'transport' ? null : 'transport')}>대중교통</button>
+        onClick={() => setOpen(previous => previous === 'transport' ? null : 'transport')}>{t('transit')}</button>
     </div>
     {open && <section className="map-layer-menu" id={open === 'map' ? 'map-layer-menu' : 'transport-layer-menu'}
-      aria-label={open === 'map' ? '지도 레이어' : '대중교통 레이어'}>
-      <h2>{open === 'map' ? '레이어' : '대중교통'}</h2>
-      {open === 'transport' && <p className="transport-note">버스·기차·전차·지하철·선박·페리는 노선과 정류장·시설을 표시합니다. 항공은 정류장·시설만 표시합니다.</p>}
+      aria-label={t(open === 'map' ? 'mapLayers' : 'transitLayers')}>
+      <h2>{t(open === 'map' ? 'layers' : 'transit')}</h2>
+      {open === 'transport' && <p className="transport-note">{t('transportNote')}</p>}
       <div className="layer-list">
         {(open === 'map' ? MAP_GROUPS : TRANSPORT_GROUPS).map(id => {
           const group = GROUPS[id]
@@ -53,24 +55,24 @@ export function LayerControls({ counts, sourceStates, visibility, onToggle }: Pr
           const source = sourceStates[group.source]
           const loading = sourceStates.poi.state === 'loading' || sourceStates.route.state === 'loading'
           const note = open === 'transport' ?
-            (unavailable ? loading ? '불러오는 중' : '데이터 없음' : `${counts[id].toLocaleString('ko-KR')}개`) :
-            source.state === 'error' ? (unavailable ? '로드 오류' : '오류 · 다시 켜기') :
-              unavailable ? '데이터 없음' : source.state === 'loading' ? '불러오는 중' : source.state === 'idle' ?
-                `${counts[id].toLocaleString('ko-KR')}개 · 켜면 로드` : `${counts[id].toLocaleString('ko-KR')}개`
+            (unavailable ? loading ? t('loading') : t('noData') : t('count', { count: number(counts[id]) })) :
+            source.state === 'error' ? (unavailable ? t('loadError') : t('retryLayer')) :
+              unavailable ? t('noData') : source.state === 'loading' ? t('loading') : source.state === 'idle' ?
+                t('loadOnEnable', { count: number(counts[id]) }) : t('count', { count: number(counts[id]) })
           return <label key={id} className={`layer-row${unavailable ? ' is-disabled' : ''}`}>
             <input type="checkbox" checked={visibility[id]} disabled={unavailable} onChange={() => onToggle(id)} />
             <span className="layer-swatch" style={{ backgroundColor: group.color }} aria-hidden="true" />
-            <span className="layer-copy"><span>{group.label}</span><small>{note}</small></span>
+            <span className="layer-copy"><span>{t(id)}</span><small>{note}</small></span>
           </label>
         })}
       </div>
       {open === 'map' && <>
-        {sourceStates.water.state === 'error' && <div className="layer-error" role="status">수역 데이터: {sourceStates.water.error}</div>}
-        {sourceStates.area.state === 'error' && <div className="layer-error" role="status">행정구역 데이터: {sourceStates.area.error}</div>}
+        {sourceStates.water.state === 'error' && <div className="layer-error" role="status">{t('waterData')} {localizeKnownError(sourceStates.water.error ?? '', t)}</div>}
+        {sourceStates.area.state === 'error' && <div className="layer-error" role="status">{t('districtData')} {localizeKnownError(sourceStates.area.error ?? '', t)}</div>}
       </>}
       {open === 'transport' && <>
-        {sourceStates.poi.state === 'error' && <div className="layer-error" role="status">교통 시설·정류장 데이터: {sourceStates.poi.error}</div>}
-        {sourceStates.route.state === 'error' && <div className="layer-error" role="status">노선 데이터: {sourceStates.route.error}</div>}
+        {sourceStates.poi.state === 'error' && <div className="layer-error" role="status">{t('poiData')} {localizeKnownError(sourceStates.poi.error ?? '', t)}</div>}
+        {sourceStates.route.state === 'error' && <div className="layer-error" role="status">{t('routeData')} {localizeKnownError(sourceStates.route.error ?? '', t)}</div>}
       </>}
     </section>}
   </div>

@@ -9,6 +9,7 @@ import { linkedBuildingRoutes } from './building-routes'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
 import { LayerControls } from './LayerControls'
+import { useI18n, localizeKnownError } from './i18n'
 import type { SearchEntry, SearchSourceState } from './Search'
 import type { DirectionPlace } from './Directions'
 import type { RouteOutcome, TransitOutcome } from './routing/types'
@@ -164,6 +165,7 @@ function constrainMap(map: MapLibreMap, all: Bounds) {
 }
 
 export function MapView() {
+  const { t } = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const visibilityRef = useRef<Visibility>({ ...INITIAL_VISIBILITY })
@@ -733,10 +735,10 @@ export function MapView() {
 
   return (
     <main className="app">
-      <div className="map" ref={containerRef} aria-label="도시 지도" />
+      <div className="map" ref={containerRef} aria-label={t('map')} />
       {status === 'ready' && <LayerControls counts={counts} sourceStates={sourceStates}
         visibility={visibility} onToggle={toggleGroup} />}
-      <Sidebar status={status} error={error} sourceStates={sourceStates}
+      <Sidebar status={status} error={localizeKnownError(error, t)} sourceStates={sourceStates}
         selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes} collapsed={sidebarCollapsed}
         onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
         onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}

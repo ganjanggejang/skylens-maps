@@ -1,6 +1,7 @@
 import type { LineString, Point, Polygon } from 'geojson'
 import type { Selection } from './interaction'
 import { brandMatchesQuery, buildingBrand, buildingTitle, normalizeText, propertyText } from './building-name'
+import type { Language } from './i18n'
 
 export type SearchEntry = { selection: Selection; geometry: Point | LineString | Polygon }
 export type SearchSourceState = 'idle' | 'loading' | 'ready' | 'empty' | 'error'
@@ -40,13 +41,21 @@ export function searchEntries(entries: SearchEntry[], query: string): SearchEntr
 
 const labels: Record<Selection['kind'], string> = { building: '건물', road: '도로', poi: '시설·정류장', route: '노선' }
 
-export function searchEntryLabel(entry: SearchEntry) {
+export function searchEntryLabel(entry: SearchEntry, language: Language = 'ko') {
   const { selection } = entry
-  return selection.kind === 'building' ? buildingTitle(selection.properties, selection.id) :
-    propertyText(selection.properties, 'Name') || `이름 없는 ${labels[selection.kind]}`
+  if (selection.kind === 'building') {
+    const title = buildingTitle(selection.properties, selection.id)
+    return language === 'en' && !propertyText(selection.properties, 'Name') && !buildingBrand(selection.properties) ?
+      `Building ${selection.id}` : title
+  }
+  return propertyText(selection.properties, 'Name') || (language === 'en' ?
+    `Unnamed ${{ building: 'building', road: 'road', poi: 'facility or stop', route: 'route' }[selection.kind]}` :
+    `이름 없는 ${labels[selection.kind]}`)
 }
 
-export function searchEntryKind(entry: SearchEntry) { return labels[entry.selection.kind] }
+export function searchEntryKind(entry: SearchEntry, language: Language = 'ko') {
+  return language === 'en' ? { building: 'Building', road: 'Road', poi: 'Facility · stop', route: 'Route' }[entry.selection.kind] : labels[entry.selection.kind]
+}
 export function searchEntryBrand(entry: SearchEntry) {
   return entry.selection.kind === 'building' ? buildingBrand(entry.selection.properties) : ''
 }

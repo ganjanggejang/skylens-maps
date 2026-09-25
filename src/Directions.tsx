@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { SearchInput } from './SearchInput'
 import { searchEntryLabel, type SearchEntry } from './search-model'
 import type { RouteOutcome, TransitOutcome } from './routing/types'
+import { useI18n, localizeKnownError, localizeGeneratedName } from './i18n'
 import './directions.css'
 
 export type DirectionPlace = { entry: SearchEntry; label: string }
@@ -18,67 +19,66 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
   onOrigin: (place: DirectionPlace | null) => void; onDestination: (place: DirectionPlace | null) => void
   onSwap: () => void; onCalculate: () => void; onClose: () => void; onActivate: () => void
 }) {
+  const { t, language, number } = useI18n()
   const [originQuery, setOriginQuery] = useState(origin?.label ?? '')
   const [destinationQuery, setDestinationQuery] = useState(destination?.label ?? '')
-  useEffect(() => { if (origin) setOriginQuery(origin.label) }, [origin])
-  useEffect(() => { if (destination) setDestinationQuery(destination.label) }, [destination])
+  useEffect(() => { if (origin) setOriginQuery(searchEntryLabel(origin.entry, language)) }, [origin, language])
+  useEffect(() => { if (destination) setDestinationQuery(searchEntryLabel(destination.entry, language)) }, [destination, language])
   const places = entries.filter(entry => entry.selection.kind !== 'route')
   function select(entry: SearchEntry, side: 'origin' | 'destination') {
-    const place = { entry, label: searchEntryLabel(entry) }
+    const place = { entry, label: searchEntryLabel(entry, language) }
     if (side === 'origin') { setOriginQuery(place.label); onOrigin(place) }
     else { setDestinationQuery(place.label); onDestination(place) }
   }
   function swap() {
-    setOriginQuery(destination?.label ?? '')
-    setDestinationQuery(origin?.label ?? '')
+    setOriginQuery(destination ? searchEntryLabel(destination.entry, language) : '')
+    setDestinationQuery(origin ? searchEntryLabel(origin.entry, language) : '')
     onSwap()
   }
   const same = origin && destination && origin.entry.selection.id === destination.entry.selection.id
-  return <section className="directions" aria-label="길찾기">
-    <div className="directions-heading"><button className="directions-back" type="button" onClick={onClose}>← 뒤로 가기</button><h2>길찾기</h2></div>
-    <SearchInput id="directions-origin" label="출발지" query={originQuery} entries={places}
-      showResults={!origin || originQuery !== origin.label} onFocus={onActivate}
+  return <section className="directions" aria-label={t('directions')}>
+    <div className="directions-heading"><button className="directions-back" type="button" onClick={onClose}>{t('back')}</button><h2>{t('directions')}</h2></div>
+    <SearchInput id="directions-origin" label={t('origin')} query={originQuery} entries={places}
+      showResults={!origin || originQuery !== searchEntryLabel(origin.entry, language)} onFocus={onActivate}
       onChange={query => { setOriginQuery(query); onOrigin(null) }} onSelect={entry => select(entry, 'origin')} />
-    <button type="button" className="directions-swap" onClick={swap} aria-label="출발지와 도착지 바꾸기">출발·도착 바꾸기 ↕</button>
-    <SearchInput id="directions-destination" label="도착지" query={destinationQuery} entries={places}
-      showResults={!destination || destinationQuery !== destination.label} onFocus={onActivate}
+    <button type="button" className="directions-swap" onClick={swap} aria-label={t('swapAria')}>{t('swap')}</button>
+    <SearchInput id="directions-destination" label={t('destination')} query={destinationQuery} entries={places}
+      showResults={!destination || destinationQuery !== searchEntryLabel(destination.entry, language)} onFocus={onActivate}
       onChange={query => { setDestinationQuery(query); onDestination(null) }} onSelect={entry => select(entry, 'destination')} />
-    {same && <p className="directions-error" role="status">출발지와 도착지가 같습니다.</p>}
-    {error && <p className="directions-error" role="alert">{error}</p>}
+    {same && <p className="directions-error" role="status">{t('samePlace')}</p>}
+    {error && <p className="directions-error" role="alert">{localizeKnownError(error, t)}</p>}
     <button type="button" className="directions-submit" disabled={!origin || !destination || !!same || calculating}
-      onClick={onCalculate}>{calculating ? '경로 계산 중…' : '경로 찾기'}</button>
+      onClick={onCalculate}>{t(calculating ? 'calculating' : 'findRoute')}</button>
     {outcome && <div className={`directions-card${selectedMode === 'vehicle' ? ' is-selected' : ''}`} aria-live="polite">
       <button type="button" className="directions-card-select" onClick={() => onSelectMode('vehicle')}
-        aria-label="차량 경로 지도에 표시" aria-pressed={selectedMode === 'vehicle'} />
-      <h3>차량</h3>
+        aria-label={t('showVehicle')} aria-pressed={selectedMode === 'vehicle'} />
+      <h3>{t('vehicle')}</h3>
       {outcome.route ? <>
-        <strong>{Math.max(1, Math.round(outcome.route.seconds / 60))}분 · {(outcome.route.distance / 1000).toFixed(1)}km</strong>
-        <p>도로 중심선 {outcome.route.featureIds.length}개 구간 · 접근 {Math.round(outcome.route.accessDistance)}m</p>
-      </> : <p>{outcome.reason === 'access' ? '출발지 또는 도착지에서 150m 이내 도로를 찾지 못했습니다.' :
-        '통행 방향을 따르는 연결 경로를 찾지 못했습니다.'}</p>}
-      <small>예상 시간 · 교통상황 미반영 · 도로 속도 제한의 80% 적용</small>
+        <strong>{t('minutes', { count: number(Math.max(1, Math.round(outcome.route.seconds / 60))) })} · {(outcome.route.distance / 1000).toFixed(1)}km</strong>
+        <p>{t('routeSummary', { count: number(outcome.route.featureIds.length), distance: number(Math.round(outcome.route.accessDistance)) })}</p>
+      </> : <p>{t(outcome.reason === 'access' ? 'vehicleAccessFailed' : 'vehicleDisconnected')}</p>}
+      <small>{t('vehicleNote')}</small>
     </div>}
     <div className={`directions-card${selectedMode === 'transit' ? ' is-selected' : ''}`} aria-live="polite">
       <button type="button" className="directions-card-select" onClick={() => onSelectMode('transit')}
-        aria-label="대중교통 경로 지도에 표시" aria-pressed={selectedMode === 'transit'} />
-      <h3>대중교통</h3>
+        aria-label={t('showTransit')} aria-pressed={selectedMode === 'transit'} />
+      <h3>{t('transit')}</h3>
       {transitOutcome?.journey ? <>
-        <strong>{Math.max(1, Math.round(transitOutcome.journey.seconds / 60))}분 · {(transitOutcome.journey.distance / 1000).toFixed(1)}km</strong>
-        <p>환승 {transitOutcome.journey.transfers}회</p>
+        <strong>{t('minutes', { count: number(Math.max(1, Math.round(transitOutcome.journey.seconds / 60))) })} · {(transitOutcome.journey.distance / 1000).toFixed(1)}km</strong>
+        <p>{t('transfers', { count: number(transitOutcome.journey.transfers) })}</p>
         {selectedMode === 'transit' && <ol className="directions-legs">{transitOutcome.journey.legs.map((leg, index) =>
           <li key={index}><button type="button" onClick={() => onLegSelect(index)}>
             {leg.kind === 'ride' ? <><span className="directions-leg-swatch" style={{ backgroundColor: leg.color }} />
-              <strong>{leg.routeName}</strong> {leg.fromStop} → {leg.toStop}</> :
-              leg.kind === 'walk' ? <>도보 {Math.round(leg.distance)}m</> :
-                <>대기 {Math.round(leg.seconds / 60)}분</>}
-            <small>{Math.max(1, Math.round(leg.seconds / 60))}분</small>
+              <strong>{localizeGeneratedName(leg.routeName ?? '', t)}</strong> {localizeGeneratedName(leg.fromStop ?? '', t)} → {localizeGeneratedName(leg.toStop ?? '', t)}</> :
+              leg.kind === 'walk' ? <>{t('walk', { distance: number(Math.round(leg.distance)) })}</> :
+                <>{t('wait', { minutes: number(Math.round(leg.seconds / 60)) })}</>}
+            <small>{t('minutes', { count: number(Math.max(1, Math.round(leg.seconds / 60))) })}</small>
           </button></li>)}</ol>}
-        <small>{transitOutcome.journey.assumptions.join(' · ')}</small>
-      </> : transitOutcome?.reason ? <p>{transitOutcome.reason === 'no-service' ? '이용할 수 있는 여객 노선과 정류장을 찾지 못했습니다.' :
-        transitOutcome.reason === 'access' ? '출발지 또는 도착지에서 도보 1km 이내 정류장을 찾지 못했습니다.' :
-          '도보 연결과 최대 2회 환승으로 이어지는 경로를 찾지 못했습니다.'}</p> :
-        <p>{transitStatus === 'error' ? transitError : transitStatus === 'calculating' ? '대중교통 경로 계산 중…' :
-          transitStatus === 'loading' ? '정류장·노선 데이터를 준비하는 중…' : '출발지와 도착지를 선택해 경로를 찾으세요.'}</p>}
+        <small>{[t('assumptionStops'), t('assumptionBidirectional'), t('assumptionWait')].join(' · ')}</small>
+      </> : transitOutcome?.reason ? <p>{t(transitOutcome.reason === 'no-service' ? 'transitNoService' :
+        transitOutcome.reason === 'access' ? 'transitAccessFailed' : 'transitDisconnected')}</p> :
+        <p>{transitStatus === 'error' ? localizeKnownError(transitError, t) : transitStatus === 'calculating' ? t('transitCalculating') :
+          transitStatus === 'loading' ? t('transitDataLoading') : t('selectPlaces')}</p>}
     </div>
   </section>
 }
