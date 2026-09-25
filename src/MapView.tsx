@@ -9,6 +9,11 @@ import { linkedBuildingRoutes } from './building-routes'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
 import type { SearchEntry, SearchSourceState } from './Search'
+import type { DirectionPlace } from './Directions'
+import type { RouteOutcome } from './routing/types'
+import { placeCoordinate } from './routing/geometry'
+import { addDirectionsLayers, showDirections } from './directions-layers'
+import { ROUTING_CONFIG } from './routing/config'
 
 type BuildingData = FeatureCollection<Polygon>
 type NetworkData = FeatureCollection<LineString>
@@ -167,6 +172,8 @@ export function MapView() {
   const selectionRef = useRef<Selection | null>(null)
   const featureLookupRef = useRef<Map<string, Selection>>(new Map())
   const datasetIdRef = useRef('')
+  const routingWorkerRef = useRef<Worker | null>(null)
+  const routingRequestRef = useRef(0)
   const searchStartedRef = useRef(false)
   const transportCountsRef = useRef<{ poi: Record<TransportMode, number>; route: Record<TransportMode, number> }>({
     poi: Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>,
@@ -179,6 +186,13 @@ export function MapView() {
   const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS)
   const [selection, setSelection] = useState<Selection | null>(null)
   const [searchEntries, setSearchEntries] = useState<SearchEntry[]>([])
+  const [directionsOpen, setDirectionsOpen] = useState(false)
+  const [directionsOrigin, setDirectionsOrigin] = useState<DirectionPlace | null>(null)
+  const [directionsDestination, setDirectionsDestination] = useState<DirectionPlace | null>(null)
+  const [directionsOutcome, setDirectionsOutcome] = useState<RouteOutcome | null>(null)
+  const [directionsCalculating, setDirectionsCalculating] = useState(false)
+  const [directionsError, setDirectionsError] = useState('')
+  const [routingReady, setRoutingReady] = useState(false)
   const [searchStates, setSearchStates] = useState<{ poi: SearchSourceState; route: SearchSourceState }>({ poi: 'idle', route: 'idle' })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sourceStates, setSourceStates] = useState<SourceStates>({
@@ -195,6 +209,45 @@ export function MapView() {
     const building = searchEntries.find(entry => entry.selection.id === selection.id)
     return building ? linkedBuildingRoutes(building, searchEntries) : []
   }, [selection, searchEntries])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map?.getSource('directions-line')) return
+    const origin = directionsOrigin ? placeCoordinate(directionsOrigin.entry.geometry) : null
+    const destination = directionsDestination ? placeCoordinate(directionsDestination.entry.geometry) : null
+    showDirections(map, directionsOpen ? directionsOutcome?.route ?? null : null,
+      directionsOpen ? origin : null, directionsOpen ? destination : null)
+    if (directionsOpen && directionsOutcome?.route) {
+      fit(map, geometryBounds(directionsOutcome.route.coordinates))
+    }
+  }, [directionsOpen, directionsOrigin, directionsDestination, directionsOutcome])
+
+  function setDirectionPlace(side: 'origin' | 'destination', place: DirectionPlace | null) {
+    routingRequestRef.current++
+    setDirectionsOutcome(null)
+    setDirectionsCalculating(false)
+    setDirectionsError('')
+    if (side === 'origin') setDirectionsOrigin(place)
+    else setDirectionsDestination(place)
+  }
+
+  function requestDirections(originPlace: DirectionPlace | null, destinationPlace: DirectionPlace | null) {
+    if (!originPlace || !destinationPlace || !routingReady || !routingWorkerRef.current) {
+      setDirectionsError('도로 데이터가 아직 준비되지 않았습니다.')
+      return
+    }
+    if (originPlace.entry.selection.id === destinationPlace.entry.selection.id) return
+    const requestId = ++routingRequestRef.current
+    setDirectionsOutcome(null)
+    setDirectionsError('')
+    setDirectionsCalculating(true)
+    routingWorkerRef.current.postMessage({ type: 'route', requestId, datasetId: datasetIdRef.current,
+      configVersion: ROUTING_CONFIG.version,
+      origin: placeCoordinate(originPlace.entry.geometry),
+      destination: placeCoordinate(destinationPlace.entry.geometry) })
+  }
+
+  function calculateDirections() { requestDirections(directionsOrigin, directionsDestination) }
 
   function updateSource(key: SourceKey, state: SourceState) {
     setSourceStates(previous => ({ ...previous, [key]: state }))
@@ -417,6 +470,23 @@ export function MapView() {
         const all = getBounds([buildings, network])
         const { area: areaInfo, water: waterInfo, datasetId } = extraInfo
         datasetIdRef.current = datasetId
+        const routingWorker = new Worker(new URL('./routing/routing.worker.ts', import.meta.url), { type: 'module' })
+        routingWorkerRef.current = routingWorker
+        routingWorker.onmessage = (event: MessageEvent<{ type: string; datasetId: string; requestId?: number;
+          outcome?: RouteOutcome; error?: string }>) => {
+          const message = event.data
+          if (message.datasetId !== datasetIdRef.current) return
+          if (message.type === 'ready') { setRoutingReady(true); return }
+          if (message.requestId !== routingRequestRef.current) return
+          setDirectionsCalculating(false)
+          if (message.type === 'result') setDirectionsOutcome(message.outcome ?? null)
+          else setDirectionsError(message.error ?? '경로 계산 오류')
+        }
+        routingWorker.onerror = () => {
+          setDirectionsCalculating(false)
+          setDirectionsError('경로 계산 작업자를 실행하지 못했습니다.')
+        }
+        routingWorker.postMessage({ type: 'init', datasetId, configVersion: ROUTING_CONFIG.version, network })
         const lookup = new Map<string, Selection>()
         const entries: SearchEntry[] = []
         for (const [index, feature] of buildings.features.entries()) {
@@ -474,6 +544,7 @@ export function MapView() {
           addBaseLayers(currentMap)
           for (const id of GROUP_ORDER) setGroupVisibility(currentMap, id, visibilityRef.current[id])
           addSelectionLayers(currentMap)
+          addDirectionsLayers(currentMap)
           currentMap.on('click', event => {
             const radius = 6
             const point = event.point
@@ -542,6 +613,8 @@ export function MapView() {
       featureLookupRef.current.clear()
       searchEntriesRef.current = []
       datasetIdRef.current = ''
+      routingWorkerRef.current?.terminate()
+      routingWorkerRef.current = null
     }
   }, [])
 
@@ -553,7 +626,22 @@ export function MapView() {
         onToggle={toggleGroup} onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
         onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}
         onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} onStopFocus={focusRouteStop}
-        onBuildingRouteSelect={selectSearchEntry} />
+        onBuildingRouteSelect={selectSearchEntry} directionsOpen={directionsOpen}
+        directionsOrigin={directionsOrigin} directionsDestination={directionsDestination}
+        directionsOutcome={directionsOutcome} directionsCalculating={directionsCalculating}
+        directionsError={directionsError} routingReady={routingReady}
+        onDirectionsOpen={() => { setDirectionsOpen(true); setSidebarCollapsed(false); loadSearchSources() }}
+        onDirectionsClose={() => { setDirectionsOpen(false); routingRequestRef.current++; setDirectionsCalculating(false); setDirectionsOutcome(null) }}
+        onDirectionPlace={setDirectionPlace}
+        onDirectionsSwap={() => {
+          routingRequestRef.current++
+          setDirectionsOrigin(directionsDestination)
+          setDirectionsDestination(directionsOrigin)
+          setDirectionsOutcome(null)
+          setDirectionsCalculating(false)
+          if (directionsOrigin && directionsDestination) requestDirections(directionsDestination, directionsOrigin)
+        }}
+        onDirectionsCalculate={calculateDirections} />
     </main>
   )
 }

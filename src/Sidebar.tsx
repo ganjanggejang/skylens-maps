@@ -3,6 +3,9 @@ import type { Selection } from './interaction'
 import { Search, type SearchEntry, type SearchSourceState } from './Search'
 import { buildingBrand, buildingTitle, normalizeText, propertyText } from './building-name'
 import { routeMode, TRANSPORT } from './transport'
+import { Directions, type DirectionPlace } from './Directions'
+import type { RouteOutcome } from './routing/types'
+import { searchEntryLabel } from './search-model'
 
 export type SourceKey = 'buildings' | 'network' | 'area' | 'water' | 'poi' | 'route'
 export type SourceState = { state: 'idle' | 'loading' | 'ready' | 'empty' | 'error'; error?: string }
@@ -28,6 +31,18 @@ type Props = {
   onSearchSelect: (entry: SearchEntry) => void
   onStopFocus: (entry: SearchEntry) => void
   onBuildingRouteSelect: (entry: SearchEntry) => void
+  directionsOpen: boolean
+  directionsOrigin: DirectionPlace | null
+  directionsDestination: DirectionPlace | null
+  directionsOutcome: RouteOutcome | null
+  directionsCalculating: boolean
+  directionsError: string
+  routingReady: boolean
+  onDirectionsOpen: () => void
+  onDirectionsClose: () => void
+  onDirectionPlace: (side: 'origin' | 'destination', place: DirectionPlace | null) => void
+  onDirectionsSwap: () => void
+  onDirectionsCalculate: () => void
 }
 
 const buildingFields = [
@@ -74,11 +89,13 @@ function uniqueRouteStops(stops: SearchEntry[]): SearchEntry[] {
   })
 }
 
-function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onStopFocus, onBuildingRouteSelect }: {
+function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onStopFocus, onBuildingRouteSelect,
+  onDirectionsPlace }: {
   selection: Selection; routeStops: SearchEntry[]; buildingRoutes: SearchEntry[];
   poiState: SourceState['state']; routeState: SourceState['state']; onClose: () => void
   onStopFocus: (entry: SearchEntry) => void
   onBuildingRouteSelect: (entry: SearchEntry) => void
+  onDirectionsPlace: (side: 'origin' | 'destination') => void
 }) {
   const { properties, kind, id } = selection
   const fields = kind === 'building' ? buildingFields : kind === 'road' ? roadFields : kind === 'route' ? routeFields : poiFields
@@ -93,6 +110,10 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
     <span className="detail-kind">{kind === 'building' ? '건물' : kind === 'road' ? '도로' : kind === 'poi' ? '시설·정류장' : '노선'}</span>
     <h2>{title}</h2>
     {location && title !== location && <p className="detail-address">{location}</p>}
+    {kind !== 'route' && <div className="detail-directions">
+      <button type="button" onClick={() => onDirectionsPlace('origin')}>출발지로 설정</button>
+      <button type="button" onClick={() => onDirectionsPlace('destination')}>목적지로 설정</button>
+    </div>}
     <dl className="detail-fields">
       {brand && normalizeText(brand) !== normalizeText(title) && <div><dt>입점 업체</dt><dd>{brand}</dd></div>}
       {fields.filter(([key]) => hasValue(properties[key])).map(([key, label]) =>
@@ -140,7 +161,15 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
 
 export function Sidebar({ status, error, counts, sourceStates, visibility, selection,
   routeStops, buildingRoutes, collapsed, onToggle, onToggleCollapsed, onClearSelection, searchEntries, searchStates,
-  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect }: Props) {
+  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, directionsOpen, directionsOrigin,
+  directionsDestination, directionsOutcome, directionsCalculating, directionsError, routingReady,
+  onDirectionsOpen, onDirectionsClose, onDirectionPlace, onDirectionsSwap, onDirectionsCalculate }: Props) {
+  function fromDetail(side: 'origin' | 'destination') {
+    const entry = searchEntries.find(item => item.selection.id === selection?.id)
+    if (!entry) return
+    onDirectionPlace(side, { entry, label: searchEntryLabel(entry) })
+    onDirectionsOpen()
+  }
   return <>
     <aside className="panel" id="map-sidebar" aria-label="지도 메뉴" hidden={collapsed}>
     <div className="panel-header">
@@ -149,10 +178,20 @@ export function Sidebar({ status, error, counts, sourceStates, visibility, selec
       <p>도로와 건물을 탐색하세요.</p>
     </div>
     {status === 'ready' && <>
-      <Search entries={searchEntries} optionalStates={searchStates} onActivate={onSearchActivate} onSelect={onSearchSelect} />
-      {selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
+      <button className="directions-open" type="button" onClick={directionsOpen ? onDirectionsClose : onDirectionsOpen}>
+        {directionsOpen ? '지도 탐색' : '길찾기'}
+      </button>
+      {directionsOpen ? <Directions
+        entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
+        outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
+        onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
+        onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
+        <Search entries={searchEntries} optionalStates={searchStates} onActivate={onSearchActivate} onSelect={onSearchSelect} />}
+      {!directionsOpen && selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
         poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
-        onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect} />}
+        onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect}
+        onDirectionsPlace={fromDetail} />}
+      {directionsOpen && !routingReady && <p className="notice" role="status">도로 경로 데이터를 준비하는 중…</p>}
       <div className="overview">
         <div className="counts">
           <div><strong>{counts.buildings.toLocaleString('ko-KR')}</strong><span>건물</span></div>
