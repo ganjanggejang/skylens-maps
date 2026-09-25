@@ -1,4 +1,4 @@
-﻿# CS2 City Map
+﻿# Skylens Maps
 
 Cities: Skylines II의 Carto GeoJSON을 `localhost:3000`에서 보는 지도입니다. 차량과 대중교통 예상 경로를 표시합니다. React, TypeScript, Vite, MapLibre GL JS를 사용합니다. 외부 배경지도나 API 키는 필요하지 않습니다.
 
