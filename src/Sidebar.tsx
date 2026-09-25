@@ -96,12 +96,12 @@ function uniqueRouteStops(stops: SearchEntry[]): SearchEntry[] {
 
 function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onStopFocus, onBuildingRouteSelect,
   onDirectionsPlace }: {
-  selection: Selection; routeStops: SearchEntry[]; buildingRoutes: SearchEntry[];
-  poiState: SourceState['state']; routeState: SourceState['state']; onClose: () => void
-  onStopFocus: (entry: SearchEntry) => void
-  onBuildingRouteSelect: (entry: SearchEntry) => void
-  onDirectionsPlace: (side: 'origin' | 'destination') => void
-}) {
+    selection: Selection; routeStops: SearchEntry[]; buildingRoutes: SearchEntry[];
+    poiState: SourceState['state']; routeState: SourceState['state']; onClose: () => void
+    onStopFocus: (entry: SearchEntry) => void
+    onBuildingRouteSelect: (entry: SearchEntry) => void
+    onDirectionsPlace: (side: 'origin' | 'destination') => void
+  }) {
   const { t, language } = useI18n()
   const { properties, kind, id } = selection
   const fields = kind === 'building' ? buildingFields : kind === 'road' ? roadFields : kind === 'route' ? routeFields : poiFields
@@ -188,39 +188,39 @@ export function Sidebar({ status, error, sourceStates, selection,
   }
   return <>
     <aside className={`panel${expanded ? ' is-expanded' : ''}`} id="map-sidebar" aria-label={t('menu')} hidden={collapsed}>
-    <div className="panel-header">
-      <div className="eyebrow">CITIES: SKYLINES II · CARTO EXPORT</div>
-      <h1>City Map</h1>
-      <p>{t('intro')}</p>
-      <div className="language-switch" role="group" aria-label={t('language')}>
-        <button type="button" lang="ko" aria-pressed={language === 'ko'} onClick={() => setLanguage('ko')}>한국어</button>
-        <button type="button" lang="en" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</button>
+      <div className="panel-header">
+        <div className="eyebrow">Maps for CITIES: SKYLINES II</div>
+        <h1>Skylens Maps</h1>
+        <p>{t('intro')}</p>
+        <div className="language-switch" role="group" aria-label={t('language')}>
+          <button type="button" lang="ko" aria-pressed={language === 'ko'} onClick={() => setLanguage('ko')}>한국어</button>
+          <button type="button" lang="en" aria-pressed={language === 'en'} onClick={() => setLanguage('en')}>English</button>
+        </div>
       </div>
-    </div>
-    {status === 'ready' && <>
-      {!directionsOpen && <button className="directions-open" type="button" onClick={openDirections}>{t('directions')}</button>}
-      {directionsOpen ? <Directions
-        entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
-        outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
-        transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}
-        selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode} onLegSelect={onDirectionsLegSelect}
-        onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
-        onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
-        <Search entries={searchEntries} optionalStates={searchStates}
-          onActivate={() => { setSearchActive(true); onSearchActivate() }}
-          onDeactivate={() => setSearchActive(false)} onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
-      {!directionsOpen && selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
-        poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
-        onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect}
-        onDirectionsPlace={fromDetail} />}
-      {directionsOpen && !routingReady && <p className="notice" role="status">{t('routeDataLoading')}</p>}
-    </>}
-    {status === 'loading' && <p className="notice" role="status">{t('mapLoading')}</p>}
-    {status === 'error' && <div className="error" role="alert">
-      <strong>{t('mapFailed')}</strong>
-      <span>{error}</span>
-      <button type="button" onClick={() => window.location.reload()}>{t('retry')}</button>
-    </div>}
+      {status === 'ready' && <>
+        {!directionsOpen && <button className="directions-open" type="button" onClick={openDirections}>{t('directions')}</button>}
+        {directionsOpen ? <Directions
+          entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
+          outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
+          transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}
+          selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode} onLegSelect={onDirectionsLegSelect}
+          onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
+          onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
+          <Search entries={searchEntries} optionalStates={searchStates}
+            onActivate={() => { setSearchActive(true); onSearchActivate() }}
+            onDeactivate={() => setSearchActive(false)} onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
+        {!directionsOpen && selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
+          poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
+          onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect}
+          onDirectionsPlace={fromDetail} />}
+        {directionsOpen && !routingReady && <p className="notice" role="status">{t('routeDataLoading')}</p>}
+      </>}
+      {status === 'loading' && <p className="notice" role="status">{t('mapLoading')}</p>}
+      {status === 'error' && <div className="error" role="alert">
+        <strong>{t('mapFailed')}</strong>
+        <span>{error}</span>
+        <button type="button" onClick={() => window.location.reload()}>{t('retry')}</button>
+      </div>}
     </aside>
     <button type="button" className={`sidebar-toggle${collapsed ? ' is-collapsed' : ''}`}
       onClick={onToggleCollapsed} aria-controls="map-sidebar" aria-expanded={!collapsed}
