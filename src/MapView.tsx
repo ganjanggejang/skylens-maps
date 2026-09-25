@@ -10,7 +10,7 @@ import { addSelectionLayers, showSelection, type Selection } from './interaction
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
 import type { SearchEntry, SearchSourceState } from './Search'
 import type { DirectionPlace } from './Directions'
-import type { RouteOutcome } from './routing/types'
+import type { RouteOutcome, TransitOutcome } from './routing/types'
 import { placeCoordinate } from './routing/geometry'
 import { addDirectionsLayers, showDirections } from './directions-layers'
 import { ROUTING_CONFIG } from './routing/config'
@@ -174,6 +174,10 @@ export function MapView() {
   const datasetIdRef = useRef('')
   const routingWorkerRef = useRef<Worker | null>(null)
   const routingRequestRef = useRef(0)
+  const transitReadyRef = useRef(false)
+  const transitFailedRef = useRef(false)
+  const transitDataRef = useRef<{ poi?: FeatureCollection<Point>; route?: FeatureCollection<LineString> }>({})
+  const transitPendingRef = useRef<{ requestId: number; origin: [number, number]; destination: [number, number] } | null>(null)
   const searchStartedRef = useRef(false)
   const transportCountsRef = useRef<{ poi: Record<TransportMode, number>; route: Record<TransportMode, number> }>({
     poi: Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>,
@@ -190,6 +194,10 @@ export function MapView() {
   const [directionsOrigin, setDirectionsOrigin] = useState<DirectionPlace | null>(null)
   const [directionsDestination, setDirectionsDestination] = useState<DirectionPlace | null>(null)
   const [directionsOutcome, setDirectionsOutcome] = useState<RouteOutcome | null>(null)
+  const [transitOutcome, setTransitOutcome] = useState<TransitOutcome | null>(null)
+  const [selectedDirectionsMode, setSelectedDirectionsMode] = useState<'vehicle' | 'transit'>('vehicle')
+  const [transitStatus, setTransitStatus] = useState<'loading' | 'calculating' | 'ready' | 'error'>('loading')
+  const [transitError, setTransitError] = useState('')
   const [directionsCalculating, setDirectionsCalculating] = useState(false)
   const [directionsError, setDirectionsError] = useState('')
   const [routingReady, setRoutingReady] = useState(false)
@@ -215,16 +223,22 @@ export function MapView() {
     if (!map?.getSource('directions-line')) return
     const origin = directionsOrigin ? placeCoordinate(directionsOrigin.entry.geometry) : null
     const destination = directionsDestination ? placeCoordinate(directionsDestination.entry.geometry) : null
-    showDirections(map, directionsOpen ? directionsOutcome?.route ?? null : null,
-      directionsOpen ? origin : null, directionsOpen ? destination : null)
-    if (directionsOpen && directionsOutcome?.route) {
-      fit(map, geometryBounds(directionsOutcome.route.coordinates))
+    const car = directionsOpen && selectedDirectionsMode === 'vehicle' ? directionsOutcome?.route ?? null : null
+    const journey = directionsOpen && selectedDirectionsMode === 'transit' ? transitOutcome?.journey ?? null : null
+    showDirections(map, car, journey, directionsOpen ? origin : null, directionsOpen ? destination : null)
+    if (car) fit(map, geometryBounds(car.coordinates))
+    if (journey) {
+      const coordinates = journey.legs.flatMap(leg => leg.coordinates)
+      if (coordinates.length) fit(map, geometryBounds(coordinates))
     }
-  }, [directionsOpen, directionsOrigin, directionsDestination, directionsOutcome])
+  }, [directionsOpen, directionsOrigin, directionsDestination, directionsOutcome, transitOutcome, selectedDirectionsMode])
 
   function setDirectionPlace(side: 'origin' | 'destination', place: DirectionPlace | null) {
     routingRequestRef.current++
     setDirectionsOutcome(null)
+    setTransitOutcome(null)
+    transitPendingRef.current = null
+    setTransitStatus(transitFailedRef.current ? 'error' : transitReadyRef.current ? 'ready' : 'loading')
     setDirectionsCalculating(false)
     setDirectionsError('')
     if (side === 'origin') setDirectionsOrigin(place)
@@ -238,13 +252,26 @@ export function MapView() {
     }
     if (originPlace.entry.selection.id === destinationPlace.entry.selection.id) return
     const requestId = ++routingRequestRef.current
+    const origin = placeCoordinate(originPlace.entry.geometry)
+    const destination = placeCoordinate(destinationPlace.entry.geometry)
     setDirectionsOutcome(null)
+    setTransitOutcome(null)
+    setTransitStatus(transitFailedRef.current ? 'error' : 'calculating')
+    setSelectedDirectionsMode('vehicle')
     setDirectionsError('')
     setDirectionsCalculating(true)
+    transitPendingRef.current = transitFailedRef.current ? null : { requestId, origin, destination }
     routingWorkerRef.current.postMessage({ type: 'route', requestId, datasetId: datasetIdRef.current,
-      configVersion: ROUTING_CONFIG.version,
-      origin: placeCoordinate(originPlace.entry.geometry),
-      destination: placeCoordinate(destinationPlace.entry.geometry) })
+      configVersion: ROUTING_CONFIG.version, origin, destination })
+    if (transitReadyRef.current) requestTransit()
+  }
+
+  function requestTransit() {
+    const pending = transitPendingRef.current
+    if (!pending || !transitReadyRef.current || !routingWorkerRef.current) return
+    routingWorkerRef.current.postMessage({ type: 'route-transit', datasetId: datasetIdRef.current,
+      configVersion: ROUTING_CONFIG.version, ...pending })
+    transitPendingRef.current = null
   }
 
   function calculateDirections() { requestDirections(directionsOrigin, directionsDestination) }
@@ -295,6 +322,13 @@ export function MapView() {
       updateSource(key, { state: 'loading' })
       try {
         const data = await loadCollection<G>(file, geometry, true)
+        if (key === 'poi') transitDataRef.current.poi = data as FeatureCollection<Point>
+        else transitDataRef.current.route = data as FeatureCollection<LineString>
+        if (transitDataRef.current.poi && transitDataRef.current.route && routingWorkerRef.current) {
+          routingWorkerRef.current.postMessage({ type: 'transit-data', datasetId: datasetIdRef.current,
+            configVersion: ROUTING_CONFIG.version,
+            pois: transitDataRef.current.poi, routes: transitDataRef.current.route })
+        }
         const map = mapRef.current
         if (!map) return
         const modeCounts = Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>
@@ -324,6 +358,10 @@ export function MapView() {
         updateSource(key, { state: additions.length ? 'ready' : 'empty' })
       } catch (cause) {
         if (mapRef.current) {
+          transitFailedRef.current = true
+          transitPendingRef.current = null
+          setTransitStatus('error')
+          setTransitError(`${key === 'poi' ? '정류장' : '노선'} 데이터를 불러오지 못했습니다.`)
           setSearchStates(previous => ({ ...previous, [key]: 'error' }))
           updateSource(key, { state: 'error', error: cause instanceof Error ? cause.message : String(cause) })
         }
@@ -473,18 +511,39 @@ export function MapView() {
         const routingWorker = new Worker(new URL('./routing/routing.worker.ts', import.meta.url), { type: 'module' })
         routingWorkerRef.current = routingWorker
         routingWorker.onmessage = (event: MessageEvent<{ type: string; datasetId: string; requestId?: number;
-          outcome?: RouteOutcome; error?: string }>) => {
+          outcome?: RouteOutcome | TransitOutcome; error?: string }>) => {
           const message = event.data
           if (message.datasetId !== datasetIdRef.current) return
           if (message.type === 'ready') { setRoutingReady(true); return }
+          if (message.type === 'transit-ready') {
+            transitReadyRef.current = true
+            setTransitStatus('ready')
+            requestTransit()
+            return
+          }
+          if (message.type === 'transit-error') {
+            transitFailedRef.current = true
+            transitPendingRef.current = null
+            setTransitStatus('error')
+            setTransitError(message.error ?? '대중교통 데이터를 준비하지 못했습니다.')
+            return
+          }
           if (message.requestId !== routingRequestRef.current) return
+          if (message.type === 'transit-result') {
+            if (message.error) { setTransitStatus('error'); setTransitError(message.error) }
+            else { setTransitOutcome(message.outcome as TransitOutcome); setTransitStatus('ready') }
+            return
+          }
           setDirectionsCalculating(false)
-          if (message.type === 'result') setDirectionsOutcome(message.outcome ?? null)
+          if (message.type === 'result') setDirectionsOutcome(message.outcome as RouteOutcome)
           else setDirectionsError(message.error ?? '경로 계산 오류')
         }
         routingWorker.onerror = () => {
           setDirectionsCalculating(false)
           setDirectionsError('경로 계산 작업자를 실행하지 못했습니다.')
+          transitFailedRef.current = true
+          setTransitStatus('error')
+          setTransitError('대중교통 경로 계산 작업자를 실행하지 못했습니다.')
         }
         routingWorker.postMessage({ type: 'init', datasetId, configVersion: ROUTING_CONFIG.version, network })
         const lookup = new Map<string, Selection>()
@@ -615,6 +674,10 @@ export function MapView() {
       datasetIdRef.current = ''
       routingWorkerRef.current?.terminate()
       routingWorkerRef.current = null
+      transitReadyRef.current = false
+      transitFailedRef.current = false
+      transitDataRef.current = {}
+      transitPendingRef.current = null
     }
   }, [])
 
@@ -629,15 +692,29 @@ export function MapView() {
         onBuildingRouteSelect={selectSearchEntry} directionsOpen={directionsOpen}
         directionsOrigin={directionsOrigin} directionsDestination={directionsDestination}
         directionsOutcome={directionsOutcome} directionsCalculating={directionsCalculating}
+        transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}
+        selectedDirectionsMode={selectedDirectionsMode} onSelectDirectionsMode={setSelectedDirectionsMode}
+        onDirectionsLegSelect={index => {
+          const leg = transitOutcome?.journey?.legs[index]
+          const map = mapRef.current
+          if (!leg || !map) return
+          if (leg.coordinates.length >= 2) fit(map, geometryBounds(leg.coordinates))
+          else if (leg.stopPoint) map.flyTo({ center: leg.stopPoint, zoom: Math.max(map.getZoom(), 15), duration: 650 })
+        }}
         directionsError={directionsError} routingReady={routingReady}
         onDirectionsOpen={() => { setDirectionsOpen(true); setSidebarCollapsed(false); loadSearchSources() }}
-        onDirectionsClose={() => { setDirectionsOpen(false); routingRequestRef.current++; setDirectionsCalculating(false); setDirectionsOutcome(null) }}
+        onDirectionsClose={() => { setDirectionsOpen(false); routingRequestRef.current++; transitPendingRef.current = null;
+          setDirectionsCalculating(false); setDirectionsOutcome(null); setTransitOutcome(null)
+          setTransitStatus(transitFailedRef.current ? 'error' : transitReadyRef.current ? 'ready' : 'loading') }}
         onDirectionPlace={setDirectionPlace}
         onDirectionsSwap={() => {
           routingRequestRef.current++
+          transitPendingRef.current = null
           setDirectionsOrigin(directionsDestination)
           setDirectionsDestination(directionsOrigin)
           setDirectionsOutcome(null)
+          setTransitOutcome(null)
+          setTransitStatus(transitFailedRef.current ? 'error' : transitReadyRef.current ? 'ready' : 'loading')
           setDirectionsCalculating(false)
           if (directionsOrigin && directionsDestination) requestDirections(directionsDestination, directionsOrigin)
         }}

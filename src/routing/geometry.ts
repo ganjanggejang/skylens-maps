@@ -21,6 +21,40 @@ export function projectPoint(point: Coordinate, start: Coordinate, end: Coordina
   return { point: projected, fraction, distance: distanceMeters(point, projected) }
 }
 
+export type LinePosition = { point: Coordinate; distance: number; progress: number;
+  segmentIndex: number; fraction: number }
+
+export function projectOnLine(point: Coordinate, line: number[][]): LinePosition | null {
+  let traveled = 0
+  let nearest: LinePosition | null = null
+  for (let index = 1; index < line.length; index++) {
+    const start = line[index - 1] as Coordinate, end = line[index] as Coordinate
+    const projection = projectPoint(point, start, end)
+    if (!nearest || projection.distance < nearest.distance) nearest = {
+      ...projection, progress: traveled + projection.fraction * distanceMeters(start, end), segmentIndex: index - 1,
+    }
+    traveled += distanceMeters(start, end)
+  }
+  return nearest
+}
+
+export function lineCumulativeDistances(line: number[][]): number[] {
+  const result = [0]
+  for (let index = 1; index < line.length; index++)
+    result.push(result[index - 1] + distanceMeters(line[index - 1] as Coordinate, line[index] as Coordinate))
+  return result
+}
+
+export function sliceLine(line: number[][], start: LinePosition, end: LinePosition): Coordinate[] {
+  if (start.progress > end.progress) return sliceLine(line, end, start).reverse()
+  const coordinates: Coordinate[] = [start.point]
+  for (let index = start.segmentIndex + 1; index <= end.segmentIndex; index++)
+    coordinates.push(line[index] as Coordinate)
+  coordinates.push(end.point)
+  return coordinates.filter((point, index) => index === 0 ||
+    point[0] !== coordinates[index - 1][0] || point[1] !== coordinates[index - 1][1])
+}
+
 function insideRing(point: Coordinate, ring: number[][]) {
   let inside = false
   for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {

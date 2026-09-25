@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { SearchInput } from './SearchInput'
 import { searchEntryLabel, type SearchEntry } from './search-model'
-import type { RouteOutcome } from './routing/types'
+import type { RouteOutcome, TransitOutcome } from './routing/types'
 import './directions.css'
 
 export type DirectionPlace = { entry: SearchEntry; label: string }
 
-export function Directions({ entries, origin, destination, outcome, calculating, error, onOrigin, onDestination,
+export function Directions({ entries, origin, destination, outcome, transitOutcome, transitStatus, transitError,
+  selectedMode, onSelectMode, onLegSelect, calculating, error, onOrigin, onDestination,
   onSwap, onCalculate, onClose, onActivate }: {
   entries: SearchEntry[]; origin: DirectionPlace | null; destination: DirectionPlace | null
   outcome: RouteOutcome | null; calculating: boolean; error: string
+  transitOutcome: TransitOutcome | null; transitStatus: 'loading' | 'calculating' | 'ready' | 'error'
+  transitError: string; selectedMode: 'vehicle' | 'transit'
+  onSelectMode: (mode: 'vehicle' | 'transit') => void
+  onLegSelect: (index: number) => void
   onOrigin: (place: DirectionPlace | null) => void; onDestination: (place: DirectionPlace | null) => void
   onSwap: () => void; onCalculate: () => void; onClose: () => void; onActivate: () => void
 }) {
@@ -42,7 +47,9 @@ export function Directions({ entries, origin, destination, outcome, calculating,
     {error && <p className="directions-error" role="alert">{error}</p>}
     <button type="button" className="directions-submit" disabled={!origin || !destination || !!same || calculating}
       onClick={onCalculate}>{calculating ? '경로 계산 중…' : '경로 찾기'}</button>
-    {outcome && <div className="directions-card" aria-live="polite">
+    {outcome && <div className={`directions-card${selectedMode === 'vehicle' ? ' is-selected' : ''}`} aria-live="polite">
+      <button type="button" className="directions-card-select" onClick={() => onSelectMode('vehicle')}
+        aria-label="차량 경로 지도에 표시" aria-pressed={selectedMode === 'vehicle'} />
       <h3>차량</h3>
       {outcome.route ? <>
         <strong>{Math.max(1, Math.round(outcome.route.seconds / 60))}분 · {(outcome.route.distance / 1000).toFixed(1)}km</strong>
@@ -51,6 +58,27 @@ export function Directions({ entries, origin, destination, outcome, calculating,
         '통행 방향을 따르는 연결 경로를 찾지 못했습니다.'}</p>}
       <small>예상 시간 · 교통상황 미반영 · 도로 속도 제한의 80% 적용</small>
     </div>}
-    <div className="directions-card"><h3>대중교통</h3><p>정류장·노선 연결 계산을 구현 중입니다.</p></div>
+    <div className={`directions-card${selectedMode === 'transit' ? ' is-selected' : ''}`} aria-live="polite">
+      <button type="button" className="directions-card-select" onClick={() => onSelectMode('transit')}
+        aria-label="대중교통 경로 지도에 표시" aria-pressed={selectedMode === 'transit'} />
+      <h3>대중교통</h3>
+      {transitOutcome?.journey ? <>
+        <strong>{Math.max(1, Math.round(transitOutcome.journey.seconds / 60))}분 · {(transitOutcome.journey.distance / 1000).toFixed(1)}km</strong>
+        <p>환승 {transitOutcome.journey.transfers}회</p>
+        {selectedMode === 'transit' && <ol className="directions-legs">{transitOutcome.journey.legs.map((leg, index) =>
+          <li key={index}><button type="button" onClick={() => onLegSelect(index)}>
+            {leg.kind === 'ride' ? <><span className="directions-leg-swatch" style={{ backgroundColor: leg.color }} />
+              <strong>{leg.routeName}</strong> {leg.fromStop} → {leg.toStop}</> :
+              leg.kind === 'walk' ? <>도보 {Math.round(leg.distance)}m</> :
+                <>대기 {Math.round(leg.seconds / 60)}분</>}
+            <small>{Math.max(1, Math.round(leg.seconds / 60))}분</small>
+          </button></li>)}</ol>}
+        <small>{transitOutcome.journey.assumptions.join(' · ')}</small>
+      </> : transitOutcome?.reason ? <p>{transitOutcome.reason === 'no-service' ? '이용할 수 있는 여객 노선과 정류장을 찾지 못했습니다.' :
+        transitOutcome.reason === 'access' ? '출발지 또는 도착지에서 도보 1km 이내 정류장을 찾지 못했습니다.' :
+          '도보 연결과 최대 2회 환승으로 이어지는 경로를 찾지 못했습니다.'}</p> :
+        <p>{transitStatus === 'error' ? transitError : transitStatus === 'calculating' ? '대중교통 경로 계산 중…' :
+          transitStatus === 'loading' ? '정류장·노선 데이터를 준비하는 중…' : '출발지와 도착지를 선택해 경로를 찾으세요.'}</p>}
+    </div>
   </section>
 }

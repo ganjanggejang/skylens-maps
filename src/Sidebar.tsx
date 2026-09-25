@@ -4,7 +4,7 @@ import { Search, type SearchEntry, type SearchSourceState } from './Search'
 import { buildingBrand, buildingTitle, normalizeText, propertyText } from './building-name'
 import { routeMode, TRANSPORT } from './transport'
 import { Directions, type DirectionPlace } from './Directions'
-import type { RouteOutcome } from './routing/types'
+import type { RouteOutcome, TransitOutcome } from './routing/types'
 import { searchEntryLabel } from './search-model'
 
 export type SourceKey = 'buildings' | 'network' | 'area' | 'water' | 'poi' | 'route'
@@ -35,6 +35,12 @@ type Props = {
   directionsOrigin: DirectionPlace | null
   directionsDestination: DirectionPlace | null
   directionsOutcome: RouteOutcome | null
+  transitOutcome: TransitOutcome | null
+  transitStatus: 'loading' | 'calculating' | 'ready' | 'error'
+  transitError: string
+  selectedDirectionsMode: 'vehicle' | 'transit'
+  onSelectDirectionsMode: (mode: 'vehicle' | 'transit') => void
+  onDirectionsLegSelect: (index: number) => void
   directionsCalculating: boolean
   directionsError: string
   routingReady: boolean
@@ -162,7 +168,9 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
 export function Sidebar({ status, error, counts, sourceStates, visibility, selection,
   routeStops, buildingRoutes, collapsed, onToggle, onToggleCollapsed, onClearSelection, searchEntries, searchStates,
   onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, directionsOpen, directionsOrigin,
-  directionsDestination, directionsOutcome, directionsCalculating, directionsError, routingReady,
+  directionsDestination, directionsOutcome, transitOutcome, transitStatus, transitError,
+  selectedDirectionsMode, onSelectDirectionsMode, onDirectionsLegSelect,
+  directionsCalculating, directionsError, routingReady,
   onDirectionsOpen, onDirectionsClose, onDirectionPlace, onDirectionsSwap, onDirectionsCalculate }: Props) {
   function fromDetail(side: 'origin' | 'destination') {
     const entry = searchEntries.find(item => item.selection.id === selection?.id)
@@ -184,6 +192,8 @@ export function Sidebar({ status, error, counts, sourceStates, visibility, selec
       {directionsOpen ? <Directions
         entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
         outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
+        transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}
+        selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode} onLegSelect={onDirectionsLegSelect}
         onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
         onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
         <Search entries={searchEntries} optionalStates={searchStates} onActivate={onSearchActivate} onSelect={onSearchSelect} />}
