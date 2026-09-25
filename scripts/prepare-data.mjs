@@ -78,6 +78,10 @@ async function prepare() {
     manifest.rasters.water = { error: error instanceof Error ? error.message : String(error) }
   }
 
+  const snapshotFiles = Object.entries(manifest.files).map(([file, info]) => `${file}:${info.sha256 ?? 'unavailable'}`)
+  snapshotFiles.push(`Depth.tif:${manifest.rasters.water.sourceSha256 ?? 'unavailable'}`)
+  manifest.datasetId = createHash('sha256').update(snapshotFiles.join('\n')).digest('hex').slice(0, 16)
+
   await writeFile(join(output, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
   for (const [file, info] of Object.entries(manifest.files)) {
     if (info.error) console.warn(`${file}: ${info.error}`)
