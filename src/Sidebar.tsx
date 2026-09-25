@@ -1,5 +1,7 @@
 import { GROUPS, TOGGLEABLE_GROUPS, type GroupId, type Visibility } from './layers'
 import type { Selection } from './interaction'
+import { Search, type SearchEntry, type SearchSourceState } from './Search'
+import { buildingBrand, buildingTitle, normalizeText } from './building-name'
 
 export type SourceKey = 'buildings' | 'network' | 'area' | 'water'
 export type SourceState = { state: 'idle' | 'loading' | 'ready' | 'empty' | 'error'; error?: string }
@@ -17,6 +19,10 @@ type Props = {
   onToggle: (id: GroupId) => void
   onToggleCollapsed: () => void
   onClearSelection: () => void
+  searchEntries: SearchEntry[]
+  searchStates: { poi: SearchSourceState; route: SearchSourceState }
+  onSearchActivate: () => void
+  onSearchSelect: (entry: SearchEntry) => void
 }
 
 const buildingFields = [
@@ -27,6 +33,11 @@ const roadFields = [
   ['Asset', '에셋'], ['Category', '분류'], ['Lane', '차선'],
   ['Limit', '속도 제한'], ['Direction', '방향'], ['Form', '형태'],
 ] as const
+const routeFields = [
+  ['Transport', '교통수단'], ['Color', '색상'], ['Length', '길이'],
+  ['Passenger', '승객'], ['Stop', '정류장'], ['Usage', '이용률'], ['Vehicle', '차량'],
+] as const
+const poiFields = [['Category', '분류'], ['Object', '종류']] as const
 
 function hasValue(value: unknown): boolean {
   return value !== null && value !== undefined && value !== ''
@@ -47,19 +58,18 @@ function address(properties: Record<string, unknown>) {
 
 function Detail({ selection, onClose }: { selection: Selection; onClose: () => void }) {
   const { properties, kind, id } = selection
-  const fields = kind === 'building' ? buildingFields : roadFields
-  const location = kind === 'building' ? address(properties) : ''
-  const companyBuilding = kind === 'building' && typeof properties.Zoning === 'string' &&
-    properties.Zoning.split(',').some(zone => ['Industrial', 'Office'].includes(zone.trim()))
-  const brand = companyBuilding && hasValue(properties.Brand) ? formatValue(properties.Brand) : ''
-  const title = brand || (companyBuilding && '빈 건물') ||
-    (hasValue(properties.Name) ? formatValue(properties.Name) : `${kind === 'building' ? '건물' : '도로'} ${id}`)
+  const fields = kind === 'building' ? buildingFields : kind === 'road' ? roadFields : kind === 'route' ? routeFields : poiFields
+  const location = kind === 'building' || kind === 'poi' ? address(properties) : ''
+  const title = kind === 'building' ? buildingTitle(properties, id) :
+    (hasValue(properties.Name) ? formatValue(properties.Name) : `${kind === 'road' ? '도로' : kind === 'poi' ? '시설·정류장' : '노선'} ${id}`)
+  const brand = kind === 'building' ? buildingBrand(properties) : ''
   return <section className="detail" aria-label="선택한 객체 상세 정보">
     <button className="detail-close" type="button" onClick={onClose} aria-label="상세 정보 닫기">×</button>
-    <span className="detail-kind">{kind === 'building' ? '건물' : '도로'}</span>
+    <span className="detail-kind">{kind === 'building' ? '건물' : kind === 'road' ? '도로' : kind === 'poi' ? '시설·정류장' : '노선'}</span>
     <h2>{title}</h2>
     {location && title !== location && <p className="detail-address">{location}</p>}
     <dl className="detail-fields">
+      {brand && normalizeText(brand) !== normalizeText(title) && <div><dt>입점 업체</dt><dd>{brand}</dd></div>}
       {fields.filter(([key]) => hasValue(properties[key])).map(([key, label]) =>
         <div key={key}><dt>{label}</dt><dd>{formatValue(properties[key])}</dd></div>)}
     </dl>
@@ -72,7 +82,7 @@ function Detail({ selection, onClose }: { selection: Selection; onClose: () => v
 }
 
 export function Sidebar({ status, error, counts, sourceStates, visibility, selection,
-  collapsed, onToggle, onToggleCollapsed, onClearSelection }: Props) {
+  collapsed, onToggle, onToggleCollapsed, onClearSelection, searchEntries, searchStates, onSearchActivate, onSearchSelect }: Props) {
   return <>
     <aside className="panel" id="map-sidebar" aria-label="지도 메뉴" hidden={collapsed}>
     <div className="panel-header">
@@ -81,6 +91,7 @@ export function Sidebar({ status, error, counts, sourceStates, visibility, selec
       <p>도로와 건물을 탐색하세요.</p>
     </div>
     {status === 'ready' && <>
+      <Search entries={searchEntries} optionalStates={searchStates} onActivate={onSearchActivate} onSelect={onSearchSelect} />
       {selection && <Detail selection={selection} onClose={onClearSelection} />}
       <div className="overview">
         <div className="counts">

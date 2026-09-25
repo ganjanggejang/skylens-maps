@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap, NavigationControl, setWorkerUrl, type LngLatBoundsLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import type { FeatureCollection, LineString, Polygon } from 'geojson'
+import type { FeatureCollection, LineString, Point, Polygon } from 'geojson'
 import { addBaseLayers, addDistrictLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setGroupVisibility, type GroupId, type Visibility } from './layers'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
+import type { SearchEntry, SearchSourceState } from './Search'
 
 type BuildingData = FeatureCollection<Polygon>
 type NetworkData = FeatureCollection<LineString>
@@ -18,7 +19,7 @@ const INITIAL_COUNTS: Counts = { water: 0, buildings: 0, roads: 0, tracks: 0, pa
 
 setWorkerUrl(workerUrl)
 
-async function loadCollection<G extends Polygon | LineString>(file: string, geometry: G['type'], allowEmpty = false) {
+async function loadCollection<G extends Polygon | LineString | Point>(file: string, geometry: G['type'], allowEmpty = false) {
   const response = await fetch(`${DATA_ROOT}/${file}`)
   if (!response.ok) throw new Error(`${file} 요청 실패 (HTTP ${response.status})`)
   let data: unknown
@@ -120,6 +121,12 @@ function getBounds(collections: Array<BuildingData | NetworkData>): Bounds {
   return [[bounds[0], bounds[1]], [bounds[2], bounds[3]]]
 }
 
+function geometryBounds(coordinates: unknown): Bounds {
+  const extent: Extent = [Infinity, Infinity, -Infinity, -Infinity]
+  extendBounds(coordinates, extent)
+  return [[extent[0], extent[1]], [extent[2], extent[3]]]
+}
+
 function expandBounds(bounds: Bounds): Bounds {
   const [[west, south], [east, north]] = bounds
   const longitudeMargin = (east - west) * 0.1
@@ -155,11 +162,16 @@ export function MapView() {
   const waterPromiseRef = useRef<Promise<void> | null>(null)
   const selectionRef = useRef<Selection | null>(null)
   const featureLookupRef = useRef<Map<string, Selection>>(new Map())
+  const datasetIdRef = useRef('')
+  const searchStartedRef = useRef(false)
+  const searchEntriesRef = useRef<SearchEntry[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
   const [visibility, setVisibility] = useState<Visibility>({ ...INITIAL_VISIBILITY })
   const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS)
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [searchEntries, setSearchEntries] = useState<SearchEntry[]>([])
+  const [searchStates, setSearchStates] = useState<{ poi: SearchSourceState; route: SearchSourceState }>({ poi: 'idle', route: 'idle' })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sourceStates, setSourceStates] = useState<SourceStates>({
     buildings: { state: 'loading' }, network: { state: 'loading' }, area: { state: 'idle' }, water: { state: 'idle' },
@@ -169,11 +181,48 @@ export function MapView() {
     setSourceStates(previous => ({ ...previous, [key]: state }))
   }
 
-  function selectFeature(next: Selection | null) {
+  function selectFeature(next: Selection | null, geometry?: SearchEntry['geometry']) {
     selectionRef.current = next
     setSelection(next)
     const map = mapRef.current
-    if (map?.getLayer('selected-road')) showSelection(map, next)
+    if (map?.getLayer('selected-road')) showSelection(map, next, geometry)
+  }
+
+  function loadSearchSources() {
+    if (searchStartedRef.current || !datasetIdRef.current) return
+    searchStartedRef.current = true
+    setSearchStates({ poi: 'loading', route: 'loading' })
+    const load = async <G extends Point | LineString>(key: 'poi' | 'route', file: string, geometry: G['type']) => {
+      try {
+        const data = await loadCollection<G>(file, geometry, true)
+        if (!mapRef.current) return
+        const additions: SearchEntry[] = data.features.map((feature, index) => ({
+          selection: { id: `${datasetIdRef.current}:${key}:${index}`, sourceFeatureId: index,
+            kind: key, properties: { ...feature.properties } }, geometry: feature.geometry,
+        }))
+        searchEntriesRef.current = [...searchEntriesRef.current, ...additions]
+        setSearchEntries([...searchEntriesRef.current])
+        setSearchStates(previous => ({ ...previous, [key]: additions.length ? 'ready' : 'empty' }))
+      } catch {
+        if (mapRef.current) setSearchStates(previous => ({ ...previous, [key]: 'error' }))
+      }
+    }
+    void Promise.all([
+      load<Point>('poi', 'POI_Location.json', 'Point'),
+      load<LineString>('route', 'Route_Centerline.json', 'LineString'),
+    ])
+  }
+
+  function selectSearchEntry(entry: SearchEntry) {
+    const map = mapRef.current
+    if (!map) return
+    selectFeature(entry.selection, entry.geometry)
+    setSidebarCollapsed(false)
+    if (entry.geometry.type === 'Point') {
+      map.flyTo({ center: [entry.geometry.coordinates[0], entry.geometry.coordinates[1]], zoom: Math.max(map.getZoom(), 15), duration: 650 })
+    } else {
+      fit(map, geometryBounds(entry.geometry.coordinates))
+    }
   }
 
   function loadArea() {
@@ -279,20 +328,28 @@ export function MapView() {
         const city = getBounds([buildings])
         const all = getBounds([buildings, network])
         const { area: areaInfo, water: waterInfo, datasetId } = extraInfo
+        datasetIdRef.current = datasetId
         const lookup = new Map<string, Selection>()
+        const entries: SearchEntry[] = []
         for (const [index, feature] of buildings.features.entries()) {
           const id = `${datasetId}:buildings:${index}`
           feature.id = index
-          lookup.set(`buildings:${index}`, { id, sourceFeatureId: index, kind: 'building', properties: { ...feature.properties } })
+          const selected: Selection = { id, sourceFeatureId: index, kind: 'building', properties: { ...feature.properties } }
+          lookup.set(`buildings:${index}`, selected)
+          entries.push({ selection: selected, geometry: feature.geometry })
         }
         for (const [index, feature] of network.features.entries()) {
           const id = `${datasetId}:network:${index}`
           feature.id = index
           if (feature.properties?.Object === 'Road') {
-            lookup.set(`network:${index}`, { id, sourceFeatureId: index, kind: 'road', properties: { ...feature.properties } })
+            const selected: Selection = { id, sourceFeatureId: index, kind: 'road', properties: { ...feature.properties } }
+            lookup.set(`network:${index}`, selected)
+            entries.push({ selection: selected, geometry: feature.geometry })
           }
         }
         featureLookupRef.current = lookup
+        searchEntriesRef.current = entries
+        setSearchEntries(entries)
         setCounts({
           water: waterInfo.waterPixels ? 1 : 0,
           buildings: buildings.features.length,
@@ -339,6 +396,7 @@ export function MapView() {
             const hit = building ?? road
             const next = hit?.id === undefined ? null : featureLookupRef.current.get(`${hit.source}:${hit.id}`) ?? null
             selectFeature(next)
+            if (next?.kind === 'building') setSidebarCollapsed(false)
           })
           currentMap.on('mousemove', event => {
             const point = event.point
@@ -375,6 +433,8 @@ export function MapView() {
       map?.remove()
       mapRef.current = null
       featureLookupRef.current.clear()
+      searchEntriesRef.current = []
+      datasetIdRef.current = ''
     }
   }, [])
 
@@ -384,7 +444,8 @@ export function MapView() {
       <Sidebar status={status} error={error} counts={counts} sourceStates={sourceStates}
         visibility={visibility} selection={selection} collapsed={sidebarCollapsed}
         onToggle={toggleGroup} onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
-        onClearSelection={() => selectFeature(null)} />
+        onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}
+        onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} />
     </main>
   )
 }

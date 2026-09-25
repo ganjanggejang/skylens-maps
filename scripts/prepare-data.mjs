@@ -9,6 +9,8 @@ const sources = [
   { file: 'Building_Boundary.json', geometry: 'Polygon', required: true },
   { file: 'Network_Centerline.json', geometry: 'LineString', required: true },
   { file: 'Area_Boundary.json', geometry: 'Polygon', required: false },
+  { file: 'POI_Location.json', geometry: 'Point', required: false },
+  { file: 'Route_Centerline.json', geometry: 'LineString', required: false },
 ]
 
 function walkCoordinates(value, bounds) {
