@@ -1,6 +1,7 @@
 import type { LineString, Point, Polygon } from 'geojson'
 
 export type Coordinate = [number, number]
+export type RoutePlace = Coordinate | Point | LineString | Polygon
 const METERS_PER_DEGREE = 111_320
 
 export function distanceMeters(a: Coordinate, b: Coordinate): number {
@@ -98,4 +99,37 @@ export function placeCoordinate(geometry: Point | LineString | Polygon): Coordin
     }
   }
   return outer[0] as Coordinate
+}
+
+export function accessPoints(place: RoutePlace, nearestDistance: (point: Coordinate) => number | null,
+  maxDistance: number, limit = 8): Coordinate[] {
+  if (Array.isArray(place)) return [place]
+  if (place.type !== 'Polygon') return [placeCoordinate(place)]
+  const ring = place.coordinates[0] as Coordinate[] | undefined
+  if (!ring || ring.length < 2) return []
+  const lengths = ring.slice(1).map((point, index) => distanceMeters(ring[index], point))
+  const spacing = Math.max(100, lengths.reduce((sum, length) => sum + length, 0) / 64)
+  const candidates: { point: Coordinate; distance: number }[] = []
+  for (let index = 0; index < lengths.length; index++) {
+    const start = ring[index], end = ring[index + 1]
+    const steps = Math.max(1, Math.ceil(lengths[index] / spacing))
+    for (let step = 0; step < steps; step++) {
+      const fraction = step / steps
+      const point: Coordinate = [start[0] + (end[0] - start[0]) * fraction,
+        start[1] + (end[1] - start[1]) * fraction]
+      const distance = nearestDistance(point)
+      if (distance !== null && distance <= maxDistance) candidates.push({ point, distance })
+    }
+  }
+  candidates.sort((a, b) => a.distance - b.distance)
+  const selected: Coordinate[] = []
+  const center = placeCoordinate(place)
+  const centerDistance = nearestDistance(center)
+  if (centerDistance !== null && centerDistance <= maxDistance) selected.push(center)
+  for (const candidate of candidates) {
+    if (selected.some(point => distanceMeters(point, candidate.point) < 125)) continue
+    selected.push(candidate.point)
+    if (selected.length === limit) break
+  }
+  return selected
 }

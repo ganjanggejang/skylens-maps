@@ -68,6 +68,26 @@ describe('TransitPlanner', () => {
     expect(planner.route([0, 0.0005], destination).journey).toBeDefined()
   })
 
+  it('walks from a large place whose mapped center is 160 meters from the road', () => {
+    const planner = new TransitPlanner(network(), pois(), routes([[0, 3]]))
+    const journey = planner.route([0, 0.00144], [x(3), 0]).journey
+    expect(journey?.legs[0].kind).toBe('walk')
+    expect(journey?.legs[0].distance).toBeGreaterThan(150)
+    expect(journey?.legs.some(leg => leg.kind === 'ride')).toBe(true)
+  })
+
+  it('reaches transit from a large building boundary when its center cannot reach a road', () => {
+    const planner = new TransitPlanner(network(), pois(), routes([[0, 3]]))
+    const building = { type: 'Polygon' as const, coordinates: [[
+      [x(0), 0.0001], [x(2), 0.0001], [x(2), 0.02], [x(0), 0.02], [x(0), 0.0001],
+    ]] }
+    expect(planner.route([x(1), 0.01], [x(3), 0]).reason).toBe('access')
+    const journey = planner.route(building, [x(3), 0]).journey
+    expect(journey?.legs.some(leg => leg.kind === 'ride')).toBe(true)
+    expect(journey?.legs[0].coordinates[0][1]).toBeCloseTo(0.0001, 6)
+    expect(planner.route([x(3), 0], building).journey?.legs.some(leg => leg.kind === 'ride')).toBe(true)
+  })
+
   it('keeps both occurrences of a stop at the seam of a closed route', () => {
     const stops: FeatureCollection<Point> = { type: 'FeatureCollection', features: [
       [0, 0], [0.02, 0], [0.02, 0.02],

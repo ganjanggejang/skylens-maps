@@ -1,6 +1,6 @@
 import type { FeatureCollection, LineString } from 'geojson'
 import { ROUTING_CONFIG } from './config'
-import { distanceMeters, projectPoint, type Coordinate } from './geometry'
+import { accessPoints, distanceMeters, projectPoint, type Coordinate, type RoutePlace } from './geometry'
 import { shortestPath } from './shortest-path'
 import type { RouteOutcome, RouteResult, RoutingEdge, TravelMode } from './types'
 
@@ -95,23 +95,30 @@ export class NetworkGraph {
     return best
   }
 
-  route(origin: Coordinate, destination: Coordinate): RouteOutcome {
+  route(origin: RoutePlace, destination: RoutePlace): RouteOutcome {
     const radius = this.mode === 'vehicle' ? ROUTING_CONFIG.vehicleAccessMeters : ROUTING_CONFIG.walkingAccessMeters
-    const startSnap = this.nearest(origin, radius)
-    const endSnap = this.nearest(destination, radius)
-    if (!startSnap || !endSnap) return { reason: 'access' }
+    const snaps = (place: RoutePlace) => {
+      const cache = new Map<string, Snap | null>()
+      const nearest = (point: Coordinate) => {
+        const key = this.pointKey(point)
+        if (!cache.has(key)) cache.set(key, this.nearest(point, radius))
+        return cache.get(key)!
+      }
+      return accessPoints(place, point => nearest(point)?.distance ?? null, radius)
+        .flatMap(point => {
+          const snap = nearest(point)
+          return snap ? [{ point, snap }] : []
+        })
+    }
+    const starts = snaps(origin), ends = snaps(destination)
+    if (!starts.length || !ends.length) return { reason: 'access' }
     const adjacency = this.adjacency.map(edges => edges.slice())
     const start = adjacency.length, finish = start + 1
-    const startAccess = finish + 1, endAccess = finish + 2
-    adjacency.push([], [], [], [])
+    adjacency.push([], [])
     const walkingSpeed = ROUTING_CONFIG.walkingMetersPerSecond
     const connect = (from: number, to: number, a: Coordinate, b: Coordinate,
       distance: number, seconds: number, featureId: number | null, kind: RoutingEdge['kind']) =>
       this.edge(adjacency, from, to, a, b, distance, seconds, featureId, kind)
-    connect(start, startAccess, origin, startSnap.point, startSnap.distance,
-      startSnap.distance / walkingSpeed, null, 'access')
-    connect(endAccess, finish, endSnap.point, destination, endSnap.distance,
-      endSnap.distance / walkingSpeed, null, 'access')
     const attach = (snap: Snap, node: number, departure: boolean) => {
       const segment = snap.segment
       const first = segment.distance * snap.fraction
@@ -129,14 +136,31 @@ export class NetworkGraph {
           segment.seconds * (1 - snap.fraction), segment.featureId, this.mode)
       }
     }
-    attach(startSnap, startAccess, true)
-    attach(endSnap, endAccess, false)
-    if (startSnap.segment === endSnap.segment) {
-      const segment = startSnap.segment
-      const delta = endSnap.fraction - startSnap.fraction
-      if (delta >= 0 && segment.direction !== 'Backward' || delta <= 0 && segment.direction !== 'Forward') {
-        connect(startAccess, endAccess, startSnap.point, endSnap.point,
-          Math.abs(delta) * segment.distance, Math.abs(delta) * segment.seconds, segment.featureId, this.mode)
+    const startNodes = starts.map(({ point, snap }) => {
+      const node = adjacency.length
+      adjacency.push([])
+      connect(start, node, point, snap.point, snap.distance,
+        snap.distance / walkingSpeed, null, 'access')
+      attach(snap, node, true)
+      return node
+    })
+    const endNodes = ends.map(({ point, snap }) => {
+      const node = adjacency.length
+      adjacency.push([])
+      attach(snap, node, false)
+      connect(node, finish, snap.point, point, snap.distance,
+        snap.distance / walkingSpeed, null, 'access')
+      return node
+    })
+    for (const [i, { snap: startSnap }] of starts.entries()) {
+      for (const [j, { snap: endSnap }] of ends.entries()) {
+        if (startSnap.segment !== endSnap.segment) continue
+        const segment = startSnap.segment
+        const delta = endSnap.fraction - startSnap.fraction
+        if (delta >= 0 && segment.direction !== 'Backward' || delta <= 0 && segment.direction !== 'Forward') {
+          connect(startNodes[i], endNodes[j], startSnap.point, endSnap.point,
+            Math.abs(delta) * segment.distance, Math.abs(delta) * segment.seconds, segment.featureId, this.mode)
+        }
       }
     }
     const edges = shortestPath(adjacency, start, finish)

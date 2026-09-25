@@ -1,6 +1,6 @@
 import type { FeatureCollection, LineString, Point } from 'geojson'
 import { ROUTING_CONFIG } from './config'
-import { distanceMeters, type Coordinate } from './geometry'
+import { accessPoints, distanceMeters, type Coordinate, type RoutePlace } from './geometry'
 import { buildTransitData, rideGeometry, type TransitData, type TransitMode } from './transit'
 import { WalkingGraph, type WalkPath } from './walking'
 import type { JourneyLeg, TransitOutcome } from './types'
@@ -101,10 +101,22 @@ export class TransitPlanner {
     return paths
   }
 
-  route(origin: Coordinate, destination: Coordinate): TransitOutcome {
+  route(origin: RoutePlace, destination: RoutePlace): TransitOutcome {
     if (!this.data.occurrences.length) return { reason: 'no-service' }
-    const access = this.walking.fromPlace(origin, ROUTING_CONFIG.walkingAccessMeters)
-    const egress = this.walking.fromPlace(destination, ROUTING_CONFIG.walkingAccessMeters)
+    const pathsFrom = (place: RoutePlace) => {
+      const paths = new Map<number, WalkPath>()
+      const points = accessPoints(place,
+        point => this.walking.index.nearest(point, ROUTING_CONFIG.walkingSnapMeters)?.distance ?? null,
+        ROUTING_CONFIG.walkingSnapMeters)
+      for (const point of points) {
+        for (const [stopId, path] of this.walking.fromPlace(point, ROUTING_CONFIG.walkingAccessMeters)) {
+          if (path.seconds < (paths.get(stopId)?.seconds ?? Infinity)) paths.set(stopId, path)
+        }
+      }
+      return paths
+    }
+    const access = pathsFrom(origin)
+    const egress = pathsFrom(destination)
     if (!access.size || !egress.size) return { reason: 'access' }
     const count = this.data.occurrences.length
     const size = count * 3 * 2

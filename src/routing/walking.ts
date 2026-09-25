@@ -170,14 +170,15 @@ export class WalkingGraph {
   }
 
   fromPlace(point: Coordinate, maxDistance: number): Map<number, WalkPath> {
-    const nearby = this.index.nearby(point, 150)
+    const accessRadius = Math.min(ROUTING_CONFIG.walkingSnapMeters, maxDistance)
+    const nearby = this.index.nearby(point, accessRadius)
     const nearest = nearby[0]
     if (!nearest) return new Map()
     const adjacency = this.adjacency.slice()
     const origin = adjacency.length
     adjacency.push([])
     // A building may touch an isolated path stub while a connected walkable road is nearby.
-    const cutoff = Math.min(150, Math.max(75, nearest.distance + 25))
+    const cutoff = Math.min(accessRadius, Math.max(75, nearest.distance + 25))
     const usedFeatures = new Set<number>()
     for (const candidate of nearby) {
       if (candidate.distance > cutoff || usedFeatures.size >= 30) break

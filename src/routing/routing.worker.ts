@@ -3,7 +3,7 @@ import type { FeatureCollection, LineString, Point } from 'geojson'
 import { NetworkGraph } from './network'
 import { TransitPlanner } from './transit-planner'
 import { ROUTING_CONFIG } from './config'
-import type { Coordinate } from './geometry'
+import type { RoutePlace } from './geometry'
 
 let graph: NetworkGraph | null = null
 let transit: TransitPlanner | null = null
@@ -15,9 +15,9 @@ self.onmessage = (event: MessageEvent<
   { type: 'transit-data'; datasetId: string; configVersion: number;
     pois: FeatureCollection<Point>; routes: FeatureCollection<LineString> } |
   { type: 'route'; datasetId: string; configVersion: number; requestId: number;
-    origin: Coordinate; destination: Coordinate } |
+    origin: RoutePlace; destination: RoutePlace } |
   { type: 'route-transit'; datasetId: string; configVersion: number; requestId: number;
-    origin: Coordinate; destination: Coordinate }
+    origin: RoutePlace; destination: RoutePlace }
 >) => {
   const message = event.data
   if (message.type === 'init') {

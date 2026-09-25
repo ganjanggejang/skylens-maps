@@ -207,7 +207,7 @@ export function MapView() {
   const transitReadyRef = useRef(false)
   const transitFailedRef = useRef(false)
   const transitDataRef = useRef<{ poi?: FeatureCollection<Point>; route?: FeatureCollection<LineString> }>({})
-  const transitPendingRef = useRef<{ requestId: number; origin: [number, number]; destination: [number, number] } | null>(null)
+  const transitPendingRef = useRef<{ requestId: number; origin: SearchEntry['geometry']; destination: SearchEntry['geometry'] } | null>(null)
   const searchStartedRef = useRef(false)
   const transportCountsRef = useRef<{ poi: Record<TransportMode, number>; route: Record<TransportMode, number> }>({
     poi: Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>,
@@ -252,10 +252,20 @@ export function MapView() {
   useEffect(() => {
     const map = mapRef.current
     if (!map?.getSource('directions-line')) return
-    const origin = directionsOrigin ? placeCoordinate(directionsOrigin.entry.geometry) : null
-    const destination = directionsDestination ? placeCoordinate(directionsDestination.entry.geometry) : null
+    let origin = directionsOrigin ? placeCoordinate(directionsOrigin.entry.geometry) : null
+    let destination = directionsDestination ? placeCoordinate(directionsDestination.entry.geometry) : null
     const car = directionsOpen && selectedDirectionsMode === 'vehicle' ? directionsOutcome?.route ?? null : null
     const journey = directionsOpen && selectedDirectionsMode === 'transit' ? transitOutcome?.journey ?? null : null
+    if (car?.coordinates.length) {
+      origin = car.coordinates[0][0]
+      destination = car.coordinates.at(-1)!.at(-1)!
+    } else if (journey) {
+      const drawn = journey.legs.filter(leg => leg.coordinates.length)
+      if (drawn.length) {
+        origin = drawn[0].coordinates[0]
+        destination = drawn.at(-1)!.coordinates.at(-1)!
+      }
+    }
     showDirections(map, car, journey, directionsOpen ? origin : null, directionsOpen ? destination : null)
     if (car) fit(map, geometryBounds(car.coordinates))
     if (journey) {
@@ -283,8 +293,8 @@ export function MapView() {
     }
     if (originPlace.entry.selection.id === destinationPlace.entry.selection.id) return
     const requestId = ++routingRequestRef.current
-    const origin = placeCoordinate(originPlace.entry.geometry)
-    const destination = placeCoordinate(destinationPlace.entry.geometry)
+    const origin = originPlace.entry.geometry
+    const destination = destinationPlace.entry.geometry
     setDirectionsOutcome(null)
     setTransitOutcome(null)
     setTransitStatus(transitFailedRef.current ? 'error' : 'calculating')
