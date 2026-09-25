@@ -34,4 +34,11 @@ it.skipIf(!available)('builds at least one usable journey from the current Expor
     const result = planner.route(placeCoordinate(cityHall.geometry), placeCoordinate(presidentialOffice.geometry))
     expect(result.journey).toBeDefined()
   }
+  const tower = buildings.find(feature => feature.properties?.Name === 'Central Park Tower')
+  const centralStation = buildings.find(feature => feature.properties?.Name === '중앙역 (Line 2, 3)')
+  if (tower && centralStation) {
+    const result = planner.route(placeCoordinate(tower.geometry), placeCoordinate(centralStation.geometry))
+    expect(result.journey?.legs.find(leg => leg.kind === 'ride')?.mode).toBe('subway')
+    expect(result.journey?.legs.find(leg => leg.kind === 'ride')?.routeName).toBe('Line 2 Underground')
+  }
 }, 120_000)

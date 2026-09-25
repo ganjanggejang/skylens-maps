@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FeatureCollection, LineString, Point } from 'geojson'
 import { TransitPlanner } from './transit-planner'
+import { buildTransitData } from './transit'
 
 const x = (value: number) => value * 0.01
 function network(): FeatureCollection<LineString> {
@@ -65,5 +66,24 @@ describe('TransitPlanner', () => {
     expect(planner.walking.index.nearest(destination, 150)?.featureId).toBe(1)
     expect(planner.walking.fromPlace(destination, 1000).size).toBeGreaterThan(0)
     expect(planner.route([0, 0.0005], destination).journey).toBeDefined()
+  })
+
+  it('keeps both occurrences of a stop at the seam of a closed route', () => {
+    const stops: FeatureCollection<Point> = { type: 'FeatureCollection', features: [
+      [0, 0], [0.02, 0], [0.02, 0.02],
+    ].map((coordinates, index) => ({ type: 'Feature',
+      geometry: { type: 'Point', coordinates },
+      properties: { Category: 'StopSubway', Name: `Station ${index}` },
+    })) }
+    const service: FeatureCollection<LineString> = { type: 'FeatureCollection', features: [{
+      type: 'Feature', geometry: { type: 'LineString', coordinates: [[0, 0], [0.02, 0], [0.02, 0.02], [0, 0]] },
+      properties: { Object: 'RoutePassenger', Transport: 'Subway', Stop: 3 },
+    }] }
+    const data = buildTransitData(stops, service)
+    expect(data.routes).toHaveLength(1)
+    expect(data.routes[0].occurrences).toHaveLength(4)
+    expect(data.occurrencesByStop[0].map(id => data.occurrences[id].occurrenceIndex)).toEqual([0, 1])
+    expect(data.occurrencesByStop[0].map(id => data.occurrences[id].position.progress)[0]).toBeCloseTo(0)
+    expect(data.occurrencesByStop[0].map(id => data.occurrences[id].position.progress)[1]).toBeGreaterThan(6000)
   })
 })

@@ -1,6 +1,6 @@
 import type { FeatureCollection, LineString, Point } from 'geojson'
 import { routeMode, TRANSPORT, type TransportMode } from '../transport'
-import { sliceLine, type Coordinate, type LinePosition } from './geometry'
+import { distanceMeters, sliceLine, type Coordinate, type LinePosition } from './geometry'
 import { SegmentIndex, type IndexedPosition } from './spatial'
 
 export type TransitMode = Exclude<TransportMode, 'air'>
@@ -27,7 +27,8 @@ function stopMode(category: unknown): TransitMode | null {
   return null
 }
 
-function bestOccurrence(positions: IndexedPosition[]): { position: IndexedPosition; ambiguous: boolean } | null {
+function bestOccurrence(positions: IndexedPosition[], total: number, closed: boolean):
+  { positions: IndexedPosition[]; ambiguous: boolean } | null {
   if (!positions.length) return null
   const sorted = positions.slice().sort((a, b) => a.progress - b.progress)
   const clusters: IndexedPosition[][] = []
@@ -39,8 +40,13 @@ function bestOccurrence(positions: IndexedPosition[]): { position: IndexedPositi
   const choices = clusters.map(cluster => cluster.reduce((best, position) =>
     position.distance < best.distance ? position : best))
     .sort((a, b) => a.distance - b.distance || a.progress - b.progress)
-  return { position: choices[0], ambiguous: choices.length > 1 &&
-    choices[1].distance <= choices[0].distance + 5 }
+  const alternatives = choices.filter(position => position.distance <= choices[0].distance + 5)
+  if (alternatives.length === 2 && closed) {
+    const first = alternatives.find(position => position.progress <= 25)
+    const last = alternatives.find(position => total - position.progress <= 25)
+    if (first && last && first !== last) return { positions: [first, last], ambiguous: false }
+  }
+  return { positions: [choices[0]], ambiguous: alternatives.length > 1 }
 }
 
 export function buildTransitData(pois: FeatureCollection<Point>, routeFeatures: FeatureCollection<LineString>): TransitData {
@@ -64,21 +70,26 @@ export function buildTransitData(pois: FeatureCollection<Point>, routeFeatures: 
     if (line.length < 2) continue
     const index = new SegmentIndex()
     index.addLine(sourceId, line)
-    const candidates: { stop: PassengerStop; position: IndexedPosition }[] = []
+    const total = index.segments.at(-1)
+    if (!total) continue
+    const length = total.progressStart + total.length
+    const closed = distanceMeters(line[0] as Coordinate, line.at(-1) as Coordinate) <= 1
+    const candidates: { stop: PassengerStop; positions: IndexedPosition[] }[] = []
     for (const stop of stops) {
       if (stop.mode !== mode) continue
-      const occurrence = bestOccurrence(index.nearby(stop.point, 50))
+      const occurrence = bestOccurrence(index.nearby(stop.point, 50), length, closed)
       if (!occurrence) continue
       if (occurrence.ambiguous) { excluded.ambiguous++; continue }
-      candidates.push({ stop, position: occurrence.position })
+      candidates.push({ stop, positions: occurrence.positions })
     }
     const limit = feature.properties.Stop
     if (typeof limit === 'number' && Number.isInteger(limit)) {
-      candidates.sort((a, b) => a.position.distance - b.position.distance || a.stop.sourceId - b.stop.sourceId)
+      candidates.sort((a, b) => a.positions[0].distance - b.positions[0].distance || a.stop.sourceId - b.stop.sourceId)
       candidates.length = Math.min(candidates.length, Math.max(0, limit))
     }
     if (candidates.length < 2) { excluded.tooFewStops++; continue }
-    candidates.sort((a, b) => a.position.progress - b.position.progress || a.stop.sourceId - b.stop.sourceId)
+    const ordered = candidates.flatMap(({ stop, positions }) => positions.map(position => ({ stop, position })))
+      .sort((a, b) => a.position.progress - b.position.progress || a.stop.sourceId - b.stop.sourceId)
     const routeId = routes.length
     const rawColor = feature.properties.Color
     const color = typeof rawColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(rawColor) ?
@@ -86,9 +97,12 @@ export function buildTransitData(pois: FeatureCollection<Point>, routeFeatures: 
     const route: PassengerRoute = { id: routeId, sourceId, mode, color, line,
       name: String(feature.properties.Name || `노선 #${sourceId + 1}`), occurrences: [] }
     routes.push(route)
-    for (const { stop, position } of candidates) {
+    const occurrenceCounts = new Map<number, number>()
+    for (const { stop, position } of ordered) {
       const id = occurrences.length
-      const occurrence: StopOccurrence = { id, routeId, stopId: stop.id, position, occurrenceIndex: 0 }
+      const occurrenceIndex = occurrenceCounts.get(stop.id) ?? 0
+      occurrenceCounts.set(stop.id, occurrenceIndex + 1)
+      const occurrence: StopOccurrence = { id, routeId, stopId: stop.id, position, occurrenceIndex }
       occurrences.push(occurrence)
       occurrencesByStop[stop.id].push(id)
       route.occurrences.push(id)

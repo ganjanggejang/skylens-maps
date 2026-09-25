@@ -8,8 +8,10 @@
 .directions-submit:disabled{opacity:.5;cursor:default}
 .directions-error{color:#a94027;font-size:13px}
 .directions-card{position:relative;margin-top:14px;padding:13px;border:1px solid #dce4dc;border-radius:9px;background:#fff;cursor:pointer}
+.directions-card:hover{background:#f7faf6}
 .directions-card.is-selected{border-color:#367657;box-shadow:0 0 0 2px #36765722}
 .directions-card-select{position:absolute;inset:0;z-index:1;width:100%;height:100%;padding:0;border:0;border-radius:inherit;background:transparent;cursor:pointer}
+.directions-card-select:hover{background:transparent}
 .directions-card-select:focus-visible{outline:3px solid #285f48;outline-offset:2px}
 .directions-card h3{margin:0 0 8px;font-size:15px}
 .directions-card strong{font-size:18px}
