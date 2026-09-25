@@ -1,0 +1,9 @@
+<Publish>
+  <ModId Value="" />
+  <DisplayName Value="SKYLENS MAPS" />
+  <ShortDescription Value="Export the current city through Carto for City Map." />
+  <LongDescription>City Map development build. Requires Carto. Stage 1 provides an export button only.</LongDescription>
+  <ModVersion Value="0.1.0" />
+  <GameVersion Value="1.6.*" />
+  <AccessLevel Value="Private" />
+</Publish>

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Configurations>Debug;Release</Configurations>
+    <AssemblyName>CityMap</AssemblyName>
+    <RootNamespace>CityMap</RootNamespace>
+    <Version>0.1.0</Version>
+    <PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
+    <CityMapGamePath Condition="'$(CityMapGamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II</CityMapGamePath>
+    <CityMapToolPath Condition="'$(CityMapToolPath)' == ''">$(CityMapGamePath)\Cities2_Data\Content\Game\.ModdingToolchain</CityMapToolPath>
+    <TargetFramework Condition="'$(CityMapCompileOnly)' == 'true'">net48</TargetFramework>
+    <LangVersion Condition="'$(CityMapCompileOnly)' == 'true'">9.0</LangVersion>
+  </PropertyGroup>
+
+  <Import Project="$(CityMapToolPath)\Mod.props" Condition="'$(CityMapCompileOnly)' != 'true'" />
+  <Import Project="$(CityMapToolPath)\Mod.targets" Condition="'$(CityMapCompileOnly)' != 'true'" />
+
+  <ItemGroup>
+    <Reference Include="Game" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Game.dll" />
+    <Reference Include="Colossal.Core" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.Core.dll" />
+    <Reference Include="Colossal.Logging" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.Logging.dll" />
+    <Reference Include="Colossal.IO.AssetDatabase" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.IO.AssetDatabase.dll" />
+    <Reference Include="Colossal.UI" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.UI.dll" />
+    <Reference Include="Colossal.UI.Binding" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.UI.Binding.dll" />
+    <Reference Include="Colossal.Localization" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Colossal.Localization.dll" />
+    <Reference Include="UnityEngine.CoreModule" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\UnityEngine.CoreModule.dll" />
+    <Reference Include="Unity.Entities" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Unity.Entities.dll" />
+    <Reference Include="Unity.Collections" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Unity.Collections.dll" />
+    <Reference Include="Newtonsoft.Json" Private="false" HintPath="$(CityMapGamePath)\Cities2_Data\Managed\Newtonsoft.Json.dll" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <Target Name="BuildCityMapWeb" BeforeTargets="BeforeBuild" Condition="'$(CityMapCompileOnly)' != 'true'">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\..\.." Command="npm.cmd run build:app" />
+  </Target>
+  <Target Name="DeployCityMapWeb" BeforeTargets="DeployWIP" Condition="'$(CityMapCompileOnly)' != 'true'">
+    <ItemGroup>
+      <CityMapWebFiles Include="$(MSBuildProjectDirectory)\..\..\dist\**\*.*" />
+    </ItemGroup>
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\..\..\dist\index.html')" Text="City Map web build is missing." />
+    <Copy SourceFiles="@(CityMapWebFiles)" DestinationFiles="@(CityMapWebFiles->'$(OutDir)\web\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+</Project>

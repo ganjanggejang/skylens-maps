@@ -16,6 +16,7 @@ import type { RouteOutcome, TransitOutcome } from './routing/types'
 import { placeCoordinate } from './routing/geometry'
 import { addDirectionsLayers, showDirections } from './directions-layers'
 import { ROUTING_CONFIG } from './routing/config'
+import './snapshot.css'
 
 type BuildingData = FeatureCollection<Polygon>
 type NetworkData = FeatureCollection<LineString>
@@ -24,14 +25,34 @@ type Bounds = [[number, number], [number, number]]
 type AreaInfo = { objects: Record<string, number>; error?: string }
 type WaterInfo = { coordinates?: [[number, number], [number, number], [number, number], [number, number]]; waterPixels?: number; error?: string }
 
-const DATA_ROOT = '/data'
+let dataRoot = '/data'
+let activeSnapshotId = ''
+async function fetchMapResource(input: string | URL, init?: RequestInit) {
+  try { return await fetch(input, init) }
+  catch {
+    throw new Error(import.meta.env.DEV ? '개발 서버에 연결할 수 없습니다' :
+      '게임과 지도 연결이 끊겼습니다. 게임이 실행 중인지 확인한 뒤 게임에서 지도를 다시 여세요.')
+  }
+}
+async function configureDataRoot() {
+  if (import.meta.env.DEV) { dataRoot = '/data'; activeSnapshotId = ''; return }
+  const response = await fetchMapResource(new URL('session.json', document.baseURI), { cache: 'no-store' })
+  if (!response.ok) throw new Error(`게임 세션에 연결할 수 없습니다 (HTTP ${response.status}). 게임에서 지도를 다시 여세요.`)
+  const session = await response.json()
+  if (typeof session?.snapshotId !== 'string' || !/^[0-9a-f]{16}$/.test(session.snapshotId) ||
+      session.dataRoot !== `snapshots/${session.snapshotId}/`) {
+    throw new Error('게임 세션의 스냅샷 설정이 올바르지 않습니다')
+  }
+  activeSnapshotId = session.snapshotId
+  dataRoot = new URL(session.dataRoot, document.baseURI).pathname.replace(/\/$/, '')
+}
 const INITIAL_COUNTS: Counts = { water: 0, buildings: 0, roads: 0, tracks: 0, pathways: 0, waterways: 0, districts: 0,
   bus: 0, train: 0, tram: 0, subway: 0, ship: 0, ferry: 0, air: 0 }
 
 setWorkerUrl(workerUrl)
 
 async function loadCollection<G extends Polygon | LineString | Point>(file: string, geometry: G['type'], allowEmpty = false) {
-  const response = await fetch(`${DATA_ROOT}/${file}`)
+  const response = await fetchMapResource(`${dataRoot}/GeoJSON/${file}`)
   if (!response.ok) throw new Error(`${file} 요청 실패 (HTTP ${response.status})`)
   let data: unknown
   try {
@@ -50,13 +71,16 @@ async function loadCollection<G extends Polygon | LineString | Point>(file: stri
   return data as FeatureCollection<G>
 }
 
-async function loadExtraInfo(): Promise<{ datasetId: string; area: AreaInfo; water: WaterInfo }> {
+async function loadExtraInfo(): Promise<{ datasetId: string; preparedAt: string; area: AreaInfo; water: WaterInfo }> {
   try {
-    const response = await fetch(`${DATA_ROOT}/manifest.json`)
+    const response = await fetchMapResource(`${dataRoot}/manifest.json`, { cache: 'no-store' })
     if (!response.ok) throw new Error(`manifest.json 요청 실패 (HTTP ${response.status})`)
     const manifest = await response.json()
     if (typeof manifest?.datasetId !== 'string' || !/^[0-9a-f]{16}$/.test(manifest.datasetId)) {
-      throw new Error('데이터셋 ID가 없습니다. npm run prepare:data를 다시 실행하세요')
+      throw new Error('스냅샷 manifest에 데이터셋 ID가 없습니다')
+    }
+    if (activeSnapshotId && manifest.datasetId !== activeSnapshotId) {
+      throw new Error('스냅샷 ID가 세션 설정과 일치하지 않습니다')
     }
     let area: AreaInfo
     try {
@@ -86,7 +110,7 @@ async function loadExtraInfo(): Promise<{ datasetId: string; area: AreaInfo; wat
     } catch (cause) {
       water = { error: cause instanceof Error ? cause.message : String(cause) }
     }
-    return { datasetId: manifest.datasetId, area, water }
+    return { datasetId: manifest.datasetId, preparedAt: String(manifest.preparedAt ?? ''), area, water }
   } catch (cause) {
     throw cause instanceof Error ? cause : new Error(String(cause))
   }
@@ -96,8 +120,9 @@ function loadWaterImage(): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('water-mask.png 이미지를 불러올 수 없습니다'))
-    image.src = `${DATA_ROOT}/water-mask.png`
+    image.onerror = () => reject(new Error(import.meta.env.DEV ? 'water-mask.png 이미지를 불러올 수 없습니다' :
+      '수역 이미지를 불러올 수 없습니다. 게임 연결 상태를 확인하세요.'))
+    image.src = `${dataRoot}/water-mask.png`
   })
 }
 
@@ -191,6 +216,7 @@ export function MapView() {
   const searchEntriesRef = useRef<SearchEntry[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  const [snapshotInfo, setSnapshotInfo] = useState<{ id: string; preparedAt: string } | null>(null)
   const [visibility, setVisibility] = useState<Visibility>({ ...INITIAL_VISIBILITY })
   const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS)
   const [selection, setSelection] = useState<Selection | null>(null)
@@ -545,6 +571,7 @@ export function MapView() {
 
     async function start() {
       try {
+        await configureDataRoot()
         const [buildings, network, extraInfo] = await Promise.all([
           loadRequired<Polygon>('buildings', 'Building_Boundary.json', 'Polygon'),
           loadRequired<LineString>('network', 'Network_Centerline.json', 'LineString'),
@@ -556,6 +583,7 @@ export function MapView() {
         const city = getBounds([buildings])
         const all = getBounds([buildings, network])
         const { area: areaInfo, water: waterInfo, datasetId } = extraInfo
+        setSnapshotInfo({ id: datasetId, preparedAt: extraInfo.preparedAt })
         datasetIdRef.current = datasetId
         const routingWorker = new Worker(new URL('./routing/routing.worker.ts', import.meta.url), { type: 'module' })
         routingWorkerRef.current = routingWorker
@@ -736,6 +764,12 @@ export function MapView() {
   return (
     <main className="app">
       <div className="map" ref={containerRef} aria-label={t('map')} />
+      {snapshotInfo && <div className="snapshot-info" role="status">
+        <strong>{t('snapshot')} {snapshotInfo.id}</strong>
+        {snapshotInfo.preparedAt && <span>{new Date(snapshotInfo.preparedAt).toLocaleString()}</span>}
+        <span>{status === 'error' ? t('snapshotError') : status === 'loading' ? t('snapshotLoading') :
+          Object.values(sourceStates).some(source => source.state === 'error') ? t('snapshotPartial') : t('snapshotReady')}</span>
+      </div>}
       {status === 'ready' && <LayerControls counts={counts} sourceStates={sourceStates}
         visibility={visibility} onToggle={toggleGroup} />}
       <Sidebar status={status} error={localizeKnownError(error, t)} sourceStates={sourceStates}

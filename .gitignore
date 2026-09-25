@@ -1,5 +1,10 @@
 /exported_files
 /node_modules
 /dist
+/artifacts
 /public/data
 /.npm-cache
+/.dotnet-home
+/mod/**/bin
+/mod/**/obj
+/mod/**/Library
