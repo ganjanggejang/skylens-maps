@@ -1,7 +1,7 @@
 .directions{margin-top:16px;border-top:1px solid #dce4dc;padding-top:16px}
-.directions-heading{display:flex;justify-content:space-between;align-items:center}
+.directions-heading{display:flex;align-items:center;gap:12px}
 .directions-heading h2{margin:0;font-size:17px}
-.directions-heading button{border:0;background:transparent;font-size:24px;cursor:pointer}
+.directions-heading .directions-back{border:0;background:transparent;padding:5px 0;font-size:12px;cursor:pointer}
 .directions .search{margin-top:12px}
 .directions-swap{margin-top:10px;border:1px solid #bdc9be;border-radius:7px;background:#fff;padding:7px 10px;cursor:pointer}
 .directions-submit{margin-top:14px;width:100%;border:0;border-radius:8px;background:#285f48;color:#fff;padding:11px;font:inherit;font-weight:700;cursor:pointer}

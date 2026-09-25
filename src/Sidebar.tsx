@@ -1,4 +1,5 @@
-import { GROUPS, TOGGLEABLE_GROUPS, type GroupId, type Visibility } from './layers'
+import { useState } from 'react'
+import type { GroupId } from './layers'
 import type { Selection } from './interaction'
 import { Search, type SearchEntry, type SearchSourceState } from './Search'
 import { buildingBrand, buildingTitle, normalizeText, propertyText } from './building-name'
@@ -15,14 +16,11 @@ export type Counts = Record<GroupId, number>
 type Props = {
   status: 'loading' | 'ready' | 'error'
   error: string
-  counts: Counts
   sourceStates: SourceStates
-  visibility: Visibility
   selection: Selection | null
   routeStops: SearchEntry[]
   buildingRoutes: SearchEntry[]
   collapsed: boolean
-  onToggle: (id: GroupId) => void
   onToggleCollapsed: () => void
   onClearSelection: () => void
   searchEntries: SearchEntry[]
@@ -165,30 +163,34 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
   </section>
 }
 
-export function Sidebar({ status, error, counts, sourceStates, visibility, selection,
-  routeStops, buildingRoutes, collapsed, onToggle, onToggleCollapsed, onClearSelection, searchEntries, searchStates,
+export function Sidebar({ status, error, sourceStates, selection,
+  routeStops, buildingRoutes, collapsed, onToggleCollapsed, onClearSelection, searchEntries, searchStates,
   onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, directionsOpen, directionsOrigin,
   directionsDestination, directionsOutcome, transitOutcome, transitStatus, transitError,
   selectedDirectionsMode, onSelectDirectionsMode, onDirectionsLegSelect,
   directionsCalculating, directionsError, routingReady,
   onDirectionsOpen, onDirectionsClose, onDirectionPlace, onDirectionsSwap, onDirectionsCalculate }: Props) {
+  const [searchActive, setSearchActive] = useState(false)
+  const expanded = directionsOpen || searchActive || selection !== null
+  function openDirections() {
+    setSearchActive(false)
+    onDirectionsOpen()
+  }
   function fromDetail(side: 'origin' | 'destination') {
     const entry = searchEntries.find(item => item.selection.id === selection?.id)
     if (!entry) return
     onDirectionPlace(side, { entry, label: searchEntryLabel(entry) })
-    onDirectionsOpen()
+    openDirections()
   }
   return <>
-    <aside className="panel" id="map-sidebar" aria-label="지도 메뉴" hidden={collapsed}>
+    <aside className={`panel${expanded ? ' is-expanded' : ''}`} id="map-sidebar" aria-label="지도 메뉴" hidden={collapsed}>
     <div className="panel-header">
       <div className="eyebrow">CITIES: SKYLINES II · CARTO EXPORT</div>
       <h1>City Map</h1>
       <p>도로와 건물을 탐색하세요.</p>
     </div>
     {status === 'ready' && <>
-      <button className="directions-open" type="button" onClick={directionsOpen ? onDirectionsClose : onDirectionsOpen}>
-        {directionsOpen ? '지도 탐색' : '길찾기'}
-      </button>
+      {!directionsOpen && <button className="directions-open" type="button" onClick={openDirections}>길찾기</button>}
       {directionsOpen ? <Directions
         entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
         outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
@@ -196,56 +198,14 @@ export function Sidebar({ status, error, counts, sourceStates, visibility, selec
         selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode} onLegSelect={onDirectionsLegSelect}
         onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
         onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
-        <Search entries={searchEntries} optionalStates={searchStates} onActivate={onSearchActivate} onSelect={onSearchSelect} />}
+        <Search entries={searchEntries} optionalStates={searchStates}
+          onActivate={() => { setSearchActive(true); onSearchActivate() }}
+          onDeactivate={() => setSearchActive(false)} onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
       {!directionsOpen && selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
         poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
         onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect}
         onDirectionsPlace={fromDetail} />}
       {directionsOpen && !routingReady && <p className="notice" role="status">도로 경로 데이터를 준비하는 중…</p>}
-      <div className="overview">
-        <div className="counts">
-          <div><strong>{counts.buildings.toLocaleString('ko-KR')}</strong><span>건물</span></div>
-          <div><strong>{counts.roads.toLocaleString('ko-KR')}</strong><span>도로 구간</span></div>
-        </div>
-        {sourceStates.water.state === 'error' && <div className="layer-error" role="status">수역 데이터: {sourceStates.water.error}</div>}
-        <section className="layer-section" aria-label="지도 레이어">
-          <h2>레이어</h2>
-          <div className="layer-list">
-            {TOGGLEABLE_GROUPS.filter(id => !['bus', 'train', 'tram', 'subway', 'ship', 'ferry', 'air'].includes(id)).map(id => {
-              const group = GROUPS[id]
-              const source = sourceStates[group.source]
-              const unavailable = counts[id] === 0
-              const note = source.state === 'error' ? (unavailable ? '로드 오류' : '오류 · 다시 켜기') :
-                unavailable ? '데이터 없음' : source.state === 'loading' ? '불러오는 중' : source.state === 'idle' ?
-                  `${counts[id].toLocaleString('ko-KR')}개 · 켜면 로드` : `${counts[id].toLocaleString('ko-KR')}개`
-              return <label key={id} className={`layer-row${unavailable ? ' is-disabled' : ''}`}>
-                <input type="checkbox" checked={visibility[id]} disabled={unavailable} onChange={() => onToggle(id)} />
-                <span className="layer-swatch" style={{ backgroundColor: group.color }} aria-hidden="true" />
-                <span className="layer-copy"><span>{group.label}</span><small>{note}</small></span>
-              </label>
-            })}
-          </div>
-          {sourceStates.area.state === 'error' && <div className="layer-error" role="status">행정구역 데이터: {sourceStates.area.error}</div>}
-        </section>
-        <section className="layer-section" aria-label="대중교통 레이어">
-          <h2>대중교통</h2>
-          <p className="transport-note">버스·기차·전차·지하철·선박·페리는 노선과 정류장·시설을 표시합니다. 항공은 정류장·시설만 표시합니다.</p>
-          <div className="layer-list">
-            {(['bus', 'train', 'tram', 'subway', 'ship', 'ferry', 'air'] as const).map(id => {
-              const group = GROUPS[id]
-              const unavailable = counts[id] === 0
-              const loading = sourceStates.poi.state === 'loading' || sourceStates.route.state === 'loading'
-              return <label key={id} className={`layer-row${unavailable ? ' is-disabled' : ''}`}>
-                <input type="checkbox" checked={visibility[id]} disabled={unavailable} onChange={() => onToggle(id)} />
-                <span className="layer-swatch" style={{ backgroundColor: group.color }} aria-hidden="true" />
-                <span className="layer-copy"><span>{group.label}</span><small>{unavailable ? loading ? '불러오는 중' : '데이터 없음' : `${counts[id].toLocaleString('ko-KR')}개`}</small></span>
-              </label>
-            })}
-          </div>
-          {sourceStates.poi.state === 'error' && <div className="layer-error" role="status">교통 시설·정류장 데이터: {sourceStates.poi.error}</div>}
-          {sourceStates.route.state === 'error' && <div className="layer-error" role="status">노선 데이터: {sourceStates.route.error}</div>}
-        </section>
-      </div>
     </>}
     {status === 'loading' && <p className="notice" role="status">지도 데이터를 불러오는 중…</p>}
     {status === 'error' && <div className="error" role="alert">

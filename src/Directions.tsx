@@ -35,7 +35,7 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
   }
   const same = origin && destination && origin.entry.selection.id === destination.entry.selection.id
   return <section className="directions" aria-label="길찾기">
-    <div className="directions-heading"><h2>길찾기</h2><button type="button" onClick={onClose} aria-label="길찾기 닫기">×</button></div>
+    <div className="directions-heading"><button className="directions-back" type="button" onClick={onClose}>← 뒤로 가기</button><h2>길찾기</h2></div>
     <SearchInput id="directions-origin" label="출발지" query={originQuery} entries={places}
       showResults={!origin || originQuery !== origin.label} onFocus={onActivate}
       onChange={query => { setOriginQuery(query); onOrigin(null) }} onSelect={entry => select(entry, 'origin')} />

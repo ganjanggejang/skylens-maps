@@ -8,6 +8,7 @@ import { nearbyStops } from './route-stops'
 import { linkedBuildingRoutes } from './building-routes'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
+import { LayerControls } from './LayerControls'
 import type { SearchEntry, SearchSourceState } from './Search'
 import type { DirectionPlace } from './Directions'
 import type { RouteOutcome, TransitOutcome } from './routing/types'
@@ -166,6 +167,8 @@ export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const visibilityRef = useRef<Visibility>({ ...INITIAL_VISIBILITY })
+  const autoTransportModesRef = useRef<Set<TransportMode>>(new Set())
+  const directionsOpenRef = useRef(false)
   const areaPromiseRef = useRef<Promise<void> | null>(null)
   const waterInfoRef = useRef<WaterInfo | null>(null)
   const waterPromiseRef = useRef<Promise<void> | null>(null)
@@ -285,19 +288,39 @@ export function MapView() {
     const entry = selected ? searchEntriesRef.current.find(item => item.selection.id === selected.id) : undefined
     const routes = entry?.selection.kind === 'route' ? [entry] :
       entry?.selection.kind === 'building' ? linkedBuildingRoutes(entry, searchEntriesRef.current) : []
-    if (entry?.selection.kind === 'building' && routes.length) {
-      const nextVisibility = { ...visibilityRef.current }
+    const neededModes = new Set<TransportMode>()
+    if (!directionsOpenRef.current && entry?.selection.kind === 'building') {
       for (const route of routes) {
         const mode = routeMode(route.selection.properties.Transport)
-        if (mode && mode !== 'air') nextVisibility[mode] = true
+        if (mode && mode !== 'air') neededModes.add(mode)
       }
-      if (TRANSPORT_MODES.some(mode => nextVisibility[mode] !== visibilityRef.current[mode])) {
-        visibilityRef.current = nextVisibility
-        setVisibility(nextVisibility)
-        for (const mode of TRANSPORT_MODES) setGroupVisibility(map, mode, nextVisibility[mode])
+    } else if (!directionsOpenRef.current && entry?.selection.kind === 'route') {
+      const mode = routeMode(entry.selection.properties.Transport)
+      if (mode && autoTransportModesRef.current.has(mode)) neededModes.add(mode)
+    } else if (!directionsOpenRef.current && entry?.selection.kind === 'poi') {
+      for (const mode of poiModes(entry.selection.properties.Category)) {
+        if (autoTransportModesRef.current.has(mode)) neededModes.add(mode)
       }
     }
-    setTransportFocus(map, routes.length ? { routes: routes.flatMap(route => {
+    const nextVisibility = { ...visibilityRef.current }
+    for (const mode of autoTransportModesRef.current) {
+      if (!neededModes.has(mode)) nextVisibility[mode] = false
+    }
+    for (const mode of neededModes) {
+      if (!nextVisibility[mode]) {
+        nextVisibility[mode] = true
+        autoTransportModesRef.current.add(mode)
+      }
+    }
+    for (const mode of [...autoTransportModesRef.current]) {
+      if (!neededModes.has(mode)) autoTransportModesRef.current.delete(mode)
+    }
+    if (TRANSPORT_MODES.some(mode => nextVisibility[mode] !== visibilityRef.current[mode])) {
+      visibilityRef.current = nextVisibility
+      setVisibility(nextVisibility)
+      for (const mode of TRANSPORT_MODES) setGroupVisibility(map, mode, nextVisibility[mode])
+    }
+    setTransportFocus(map, !directionsOpenRef.current && routes.length ? { routes: routes.flatMap(route => {
       const mode = routeMode(route.selection.properties.Transport)
       return mode ? [{ mode, routeId: route.selection.sourceFeatureId,
         stopIds: nearbyStops(route, searchEntriesRef.current).map(stop => stop.selection.sourceFeatureId) }] : []
@@ -312,6 +335,29 @@ export function MapView() {
       showSelection(map, next, geometry)
       updateTransportFocus(map)
     }
+  }
+
+  function closeDirections() {
+    if (!directionsOpenRef.current) return
+    directionsOpenRef.current = false
+    setDirectionsOpen(false)
+    routingRequestRef.current++
+    transitPendingRef.current = null
+    setDirectionsCalculating(false)
+    setDirectionsOutcome(null)
+    setTransitOutcome(null)
+    setTransitStatus(transitFailedRef.current ? 'error' : transitReadyRef.current ? 'ready' : 'loading')
+    const map = mapRef.current
+    if (map?.getLayer('selected-road')) updateTransportFocus(map)
+  }
+
+  function openDirections() {
+    directionsOpenRef.current = true
+    setDirectionsOpen(true)
+    setSidebarCollapsed(false)
+    loadSearchSources()
+    const map = mapRef.current
+    if (map?.getLayer('selected-road')) updateTransportFocus(map)
   }
 
   function loadSearchSources() {
@@ -380,6 +426,7 @@ export function MapView() {
     const poiMode = entry.selection.kind === 'poi' ? poiModes(entry.selection.properties.Category)[0] : null
     const mode = selectedMode ?? poiMode
     if (mode && (entry.selection.kind === 'poi' || mode !== 'air')) {
+      autoTransportModesRef.current.delete(mode)
       visibilityRef.current = { ...visibilityRef.current, [mode]: true }
       setVisibility({ ...visibilityRef.current })
       setGroupVisibility(map, mode, true)
@@ -627,7 +674,10 @@ export function MapView() {
             const selectedGeometry = next?.kind === 'poi' || next?.kind === 'route' ?
               searchEntriesRef.current.find(entry => entry.selection.id === next.id)?.geometry : undefined
             selectFeature(next, selectedGeometry)
-            if (next) setSidebarCollapsed(false)
+            if (next) {
+              closeDirections()
+              setSidebarCollapsed(false)
+            }
           })
           currentMap.on('mousemove', event => {
             const point = event.point
@@ -684,9 +734,11 @@ export function MapView() {
   return (
     <main className="app">
       <div className="map" ref={containerRef} aria-label="도시 지도" />
-      <Sidebar status={status} error={error} counts={counts} sourceStates={sourceStates}
-        visibility={visibility} selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes} collapsed={sidebarCollapsed}
-        onToggle={toggleGroup} onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
+      {status === 'ready' && <LayerControls counts={counts} sourceStates={sourceStates}
+        visibility={visibility} onToggle={toggleGroup} />}
+      <Sidebar status={status} error={error} sourceStates={sourceStates}
+        selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes} collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
         onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}
         onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} onStopFocus={focusRouteStop}
         onBuildingRouteSelect={selectSearchEntry} directionsOpen={directionsOpen}
@@ -702,10 +754,8 @@ export function MapView() {
           else if (leg.stopPoint) map.flyTo({ center: leg.stopPoint, zoom: Math.max(map.getZoom(), 15), duration: 650 })
         }}
         directionsError={directionsError} routingReady={routingReady}
-        onDirectionsOpen={() => { setDirectionsOpen(true); setSidebarCollapsed(false); loadSearchSources() }}
-        onDirectionsClose={() => { setDirectionsOpen(false); routingRequestRef.current++; transitPendingRef.current = null;
-          setDirectionsCalculating(false); setDirectionsOutcome(null); setTransitOutcome(null)
-          setTransitStatus(transitFailedRef.current ? 'error' : transitReadyRef.current ? 'ready' : 'loading') }}
+        onDirectionsOpen={openDirections}
+        onDirectionsClose={closeDirections}
         onDirectionPlace={setDirectionPlace}
         onDirectionsSwap={() => {
           routingRequestRef.current++
