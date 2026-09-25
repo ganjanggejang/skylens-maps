@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Map as MapLibreMap, NavigationControl, setWorkerUrl, type LngLatBoundsLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import type { FeatureCollection, LineString, Point, Polygon } from 'geojson'
-import { addBaseLayers, addDistrictLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setGroupVisibility, type GroupId, type Visibility } from './layers'
+import type { FeatureCollection, Geometry, LineString, Point, Polygon } from 'geojson'
+import { addBaseLayers, addDistrictLayers, addTransportLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setGroupVisibility, setTransportFocus, type GroupId, type Visibility } from './layers'
+import { poiModes, routeMode, TRANSPORT_MODES, type TransportMode } from './transport'
+import { nearbyStops } from './route-stops'
+import { linkedBuildingRoutes } from './building-routes'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
 import type { SearchEntry, SearchSourceState } from './Search'
@@ -15,7 +18,8 @@ type AreaInfo = { objects: Record<string, number>; error?: string }
 type WaterInfo = { coordinates?: [[number, number], [number, number], [number, number], [number, number]]; waterPixels?: number; error?: string }
 
 const DATA_ROOT = '/data'
-const INITIAL_COUNTS: Counts = { water: 0, buildings: 0, roads: 0, tracks: 0, pathways: 0, waterways: 0, districts: 0 }
+const INITIAL_COUNTS: Counts = { water: 0, buildings: 0, roads: 0, tracks: 0, pathways: 0, waterways: 0, districts: 0,
+  bus: 0, train: 0, tram: 0, subway: 0, ship: 0, ferry: 0, air: 0 }
 
 setWorkerUrl(workerUrl)
 
@@ -164,6 +168,10 @@ export function MapView() {
   const featureLookupRef = useRef<Map<string, Selection>>(new Map())
   const datasetIdRef = useRef('')
   const searchStartedRef = useRef(false)
+  const transportCountsRef = useRef<{ poi: Record<TransportMode, number>; route: Record<TransportMode, number> }>({
+    poi: Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>,
+    route: Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>,
+  })
   const searchEntriesRef = useRef<SearchEntry[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
@@ -175,17 +183,55 @@ export function MapView() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sourceStates, setSourceStates] = useState<SourceStates>({
     buildings: { state: 'loading' }, network: { state: 'loading' }, area: { state: 'idle' }, water: { state: 'idle' },
+    poi: { state: 'idle' }, route: { state: 'idle' },
   })
+  const routeStops = useMemo(() => {
+    if (selection?.kind !== 'route') return []
+    const route = searchEntries.find(entry => entry.selection.id === selection.id)
+    return route ? nearbyStops(route, searchEntries) : []
+  }, [selection, searchEntries])
+  const buildingRoutes = useMemo(() => {
+    if (selection?.kind !== 'building') return []
+    const building = searchEntries.find(entry => entry.selection.id === selection.id)
+    return building ? linkedBuildingRoutes(building, searchEntries) : []
+  }, [selection, searchEntries])
 
   function updateSource(key: SourceKey, state: SourceState) {
     setSourceStates(previous => ({ ...previous, [key]: state }))
   }
 
-  function selectFeature(next: Selection | null, geometry?: SearchEntry['geometry']) {
+  function updateTransportFocus(map: MapLibreMap) {
+    const selected = selectionRef.current
+    const entry = selected ? searchEntriesRef.current.find(item => item.selection.id === selected.id) : undefined
+    const routes = entry?.selection.kind === 'route' ? [entry] :
+      entry?.selection.kind === 'building' ? linkedBuildingRoutes(entry, searchEntriesRef.current) : []
+    if (entry?.selection.kind === 'building' && routes.length) {
+      const nextVisibility = { ...visibilityRef.current }
+      for (const route of routes) {
+        const mode = routeMode(route.selection.properties.Transport)
+        if (mode && mode !== 'air') nextVisibility[mode] = true
+      }
+      if (TRANSPORT_MODES.some(mode => nextVisibility[mode] !== visibilityRef.current[mode])) {
+        visibilityRef.current = nextVisibility
+        setVisibility(nextVisibility)
+        for (const mode of TRANSPORT_MODES) setGroupVisibility(map, mode, nextVisibility[mode])
+      }
+    }
+    setTransportFocus(map, routes.length ? { routes: routes.flatMap(route => {
+      const mode = routeMode(route.selection.properties.Transport)
+      return mode ? [{ mode, routeId: route.selection.sourceFeatureId,
+        stopIds: nearbyStops(route, searchEntriesRef.current).map(stop => stop.selection.sourceFeatureId) }] : []
+    }) } : null)
+  }
+
+  function selectFeature(next: Selection | null, geometry?: Geometry) {
     selectionRef.current = next
     setSelection(next)
     const map = mapRef.current
-    if (map?.getLayer('selected-road')) showSelection(map, next, geometry)
+    if (map?.getLayer('selected-road')) {
+      showSelection(map, next, geometry)
+      updateTransportFocus(map)
+    }
   }
 
   function loadSearchSources() {
@@ -193,18 +239,41 @@ export function MapView() {
     searchStartedRef.current = true
     setSearchStates({ poi: 'loading', route: 'loading' })
     const load = async <G extends Point | LineString>(key: 'poi' | 'route', file: string, geometry: G['type']) => {
+      updateSource(key, { state: 'loading' })
       try {
         const data = await loadCollection<G>(file, geometry, true)
-        if (!mapRef.current) return
+        const map = mapRef.current
+        if (!map) return
+        const modeCounts = Object.fromEntries(TRANSPORT_MODES.map(mode => [mode, 0])) as Record<TransportMode, number>
         const additions: SearchEntry[] = data.features.map((feature, index) => ({
           selection: { id: `${datasetIdRef.current}:${key}:${index}`, sourceFeatureId: index,
             kind: key, properties: { ...feature.properties } }, geometry: feature.geometry,
         }))
+        for (const [index, feature] of data.features.entries()) {
+          feature.id = index
+          const modes = key === 'poi' ? poiModes(feature.properties?.Category) :
+            [routeMode(feature.properties?.Transport)].filter((mode): mode is TransportMode => mode !== null)
+          feature.properties = { ...feature.properties,
+            ...(key === 'poi' ? { _transportModes: modes } : { _transportMode: modes[0] ?? '' }) }
+          for (const mode of modes) modeCounts[mode]++
+          featureLookupRef.current.set(`${key}:${index}`, additions[index].selection)
+        }
+        map.addSource(key, { type: 'geojson', data })
+        addTransportLayers(map, key)
+        transportCountsRef.current[key] = modeCounts
+        setCounts(previous => ({ ...previous, ...Object.fromEntries(TRANSPORT_MODES.map(mode =>
+          [mode, transportCountsRef.current.poi[mode] + transportCountsRef.current.route[mode]])) }))
+        for (const mode of TRANSPORT_MODES) setGroupVisibility(map, mode, visibilityRef.current[mode])
         searchEntriesRef.current = [...searchEntriesRef.current, ...additions]
         setSearchEntries([...searchEntriesRef.current])
+        updateTransportFocus(map)
         setSearchStates(previous => ({ ...previous, [key]: additions.length ? 'ready' : 'empty' }))
-      } catch {
-        if (mapRef.current) setSearchStates(previous => ({ ...previous, [key]: 'error' }))
+        updateSource(key, { state: additions.length ? 'ready' : 'empty' })
+      } catch (cause) {
+        if (mapRef.current) {
+          setSearchStates(previous => ({ ...previous, [key]: 'error' }))
+          updateSource(key, { state: 'error', error: cause instanceof Error ? cause.message : String(cause) })
+        }
       }
     }
     void Promise.all([
@@ -216,13 +285,28 @@ export function MapView() {
   function selectSearchEntry(entry: SearchEntry) {
     const map = mapRef.current
     if (!map) return
-    selectFeature(entry.selection, entry.geometry)
+    const selectedMode = entry.selection.kind === 'route' ? routeMode(entry.selection.properties.Transport) : null
+    const poiMode = entry.selection.kind === 'poi' ? poiModes(entry.selection.properties.Category)[0] : null
+    const mode = selectedMode ?? poiMode
+    if (mode && (entry.selection.kind === 'poi' || mode !== 'air')) {
+      visibilityRef.current = { ...visibilityRef.current, [mode]: true }
+      setVisibility({ ...visibilityRef.current })
+      setGroupVisibility(map, mode, true)
+    }
+    selectFeature(entry.selection, entry.selection.kind === 'route' && (!selectedMode || selectedMode === 'air') ? undefined : entry.geometry)
     setSidebarCollapsed(false)
     if (entry.geometry.type === 'Point') {
       map.flyTo({ center: [entry.geometry.coordinates[0], entry.geometry.coordinates[1]], zoom: Math.max(map.getZoom(), 15), duration: 650 })
     } else {
       fit(map, geometryBounds(entry.geometry.coordinates))
     }
+  }
+
+  function focusRouteStop(entry: SearchEntry) {
+    const map = mapRef.current
+    if (!map || entry.geometry.type !== 'Point') return
+    map.flyTo({ center: [entry.geometry.coordinates[0], entry.geometry.coordinates[1]],
+      zoom: Math.max(map.getZoom(), 15), duration: 700 })
   }
 
   function loadArea() {
@@ -290,13 +374,17 @@ export function MapView() {
     const next = !visibilityRef.current[id]
     if (!next && selectionRef.current &&
       ((id === 'buildings' && selectionRef.current.kind === 'building') ||
-       (id === 'roads' && selectionRef.current.kind === 'road'))) selectFeature(null)
+       (id === 'roads' && selectionRef.current.kind === 'road') ||
+       (selectionRef.current.kind === 'route' && routeMode(selectionRef.current.properties.Transport) === id) ||
+       (selectionRef.current.kind === 'poi' && poiModes(selectionRef.current.properties.Category).includes(id as TransportMode)) ||
+       (selectionRef.current.kind === 'building' && buildingRoutes.some(route => routeMode(route.selection.properties.Transport) === id)))) selectFeature(null)
     visibilityRef.current = { ...visibilityRef.current, [id]: next }
     setVisibility({ ...visibilityRef.current })
     const map = mapRef.current
     if (!map) return
     if (GROUPS[id].source === 'area' && next && !map.getSource('area')) loadArea()
     else setGroupVisibility(map, id, next)
+    updateTransportFocus(map)
   }
 
   useEffect(() => {
@@ -358,6 +446,7 @@ export function MapView() {
           pathways: networkObjects.Pathway ?? 0,
           waterways: networkObjects.Waterway ?? 0,
           districts: areaInfo.objects.District ?? 0,
+          bus: 0, train: 0, tram: 0, subway: 0, ship: 0, ferry: 0, air: 0,
         })
         if (areaInfo.error) updateSource('area', { state: 'error', error: areaInfo.error })
         else if (!areaInfo.objects.District) updateSource('area', { state: 'empty' })
@@ -386,32 +475,50 @@ export function MapView() {
           for (const id of GROUP_ORDER) setGroupVisibility(currentMap, id, visibilityRef.current[id])
           addSelectionLayers(currentMap)
           currentMap.on('click', event => {
-            const building = currentMap.queryRenderedFeatures(event.point, { layers: ['building-fill'] })[0]
             const radius = 6
             const point = event.point
-            const road = building ? undefined : currentMap.queryRenderedFeatures(
+            const transportPoiLayers = TRANSPORT_MODES.map(mode => `transport-${mode}-poi`).filter(id => currentMap.getLayer(id))
+            const transportRouteLayers = TRANSPORT_MODES.map(mode => `transport-${mode}-route`).filter(id => currentMap.getLayer(id))
+            const poi = transportPoiLayers.length ? currentMap.queryRenderedFeatures(event.point, { layers: transportPoiLayers })[0] : undefined
+            const poiIsFacility = typeof poi?.properties?.Category === 'string' &&
+              poi.properties.Category.split(',').some((token: string) => /^(Building|Depot)/.test(token.trim()))
+            const route = !poi && transportRouteLayers.length ? currentMap.queryRenderedFeatures(
+              [[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]],
+              { layers: transportRouteLayers },
+            )[0] : undefined
+            const building = poi && !poiIsFacility || route ? undefined :
+              currentMap.queryRenderedFeatures(event.point, { layers: ['building-fill'] })[0]
+            const road = building || poi || route ? undefined : currentMap.queryRenderedFeatures(
               [[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]],
               { layers: ['road-line'] },
             )[0]
-            const hit = building ?? road
+            const hit = poiIsFacility && building ? building : poi ?? route ?? building ?? road
             const next = hit?.id === undefined ? null : featureLookupRef.current.get(`${hit.source}:${hit.id}`) ?? null
-            selectFeature(next)
-            if (next?.kind === 'building') setSidebarCollapsed(false)
+            const selectedGeometry = next?.kind === 'poi' || next?.kind === 'route' ?
+              searchEntriesRef.current.find(entry => entry.selection.id === next.id)?.geometry : undefined
+            selectFeature(next, selectedGeometry)
+            if (next) setSidebarCollapsed(false)
           })
           currentMap.on('mousemove', event => {
             const point = event.point
             const building = currentMap.queryRenderedFeatures(point, { layers: ['building-fill'] }).length > 0
+            const transportLayers = TRANSPORT_MODES.flatMap(mode => [`transport-${mode}-poi`, `transport-${mode}-route`])
+              .filter(id => currentMap.getLayer(id))
+            const transport = transportLayers.length > 0 && currentMap.queryRenderedFeatures(
+              [[point.x - 6, point.y - 6], [point.x + 6, point.y + 6]], { layers: transportLayers },
+            ).length > 0
             const road = building || currentMap.queryRenderedFeatures(
               [[point.x - 6, point.y - 6], [point.x + 6, point.y + 6]],
               { layers: ['road-line'] },
             ).length > 0
-            currentMap.getCanvas().style.cursor = building || road ? 'pointer' : ''
+            currentMap.getCanvas().style.cursor = building || transport || road ? 'pointer' : ''
           })
           constrainMap(currentMap, all)
           fit(currentMap, city)
           mapReady = true
           setStatus('ready')
           if (waterInfo.coordinates) loadWater()
+          loadSearchSources()
         })
         currentMap.on('error', event => {
           if (!cancelled && !mapReady) {
@@ -442,10 +549,11 @@ export function MapView() {
     <main className="app">
       <div className="map" ref={containerRef} aria-label="도시 지도" />
       <Sidebar status={status} error={error} counts={counts} sourceStates={sourceStates}
-        visibility={visibility} selection={selection} collapsed={sidebarCollapsed}
+        visibility={visibility} selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes} collapsed={sidebarCollapsed}
         onToggle={toggleGroup} onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
         onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}
-        onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} />
+        onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} onStopFocus={focusRouteStop}
+        onBuildingRouteSelect={selectSearchEntry} />
     </main>
   )
 }

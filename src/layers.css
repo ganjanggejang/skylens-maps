@@ -1,5 +1,27 @@
 .layer-section{margin-top:19px;padding-top:14px;border-top:1px solid #e2e5dd}
 .layer-section h2{margin:0 0 10px;font-size:12px;letter-spacing:.04em;color:#52645a}
+.transport-note{margin:0 0 9px!important;font-size:11px!important;line-height:1.45;color:#748078!important}
+.detail .route-stops{margin-top:20px;padding-top:16px;border-top:1px solid #edf0ea}
+.detail .route-stops h3{margin:0 0 9px;font-size:13px}
+.detail .route-stops ol{margin:0;padding-left:23px}
+.detail .route-stops li{border-bottom:1px solid #edf0ea}
+.detail .route-stops li::marker{font-size:11px;color:#748078}
+.detail .route-stop-button{display:flex;flex-direction:column;gap:3px;width:100%;padding:9px 4px;border:0;border-radius:4px;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:400}
+.detail .route-stop-button:hover{background:#eef3eb}
+.detail .route-stops li strong{font-weight:650}
+.detail .route-stops li small{font-size:10px;color:#748078}
+.detail .route-stops p{font-size:11px;line-height:1.45}
+.detail .route-stop-note{margin-top:12px;color:#748078}
+.detail .building-routes{margin-top:20px;padding-top:16px;border-top:1px solid #edf0ea}
+.detail .building-routes h3{margin:0 0 9px;font-size:13px}
+.detail .building-routes ul{list-style:none;margin:0;padding:0}
+.detail .building-routes li{border-bottom:1px solid #edf0ea}
+.detail .building-routes li button{display:flex;align-items:center;gap:9px;width:100%;padding:9px 4px;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:400}
+.detail .building-routes li button:hover{background:#eef3eb}
+.detail .building-routes li button span:last-child{display:flex;flex-direction:column;gap:3px}
+.detail .building-routes li small{font-size:10px;color:#748078}
+.detail .building-route-swatch{width:12px;height:12px;border-radius:3px;flex:none}
+.detail .building-routes p{font-size:11px;line-height:1.45}
 .layer-list{display:flex;flex-direction:column;gap:2px}
 .layer-row{display:flex;align-items:center;gap:9px;min-height:40px;padding:5px 3px;border-radius:6px;cursor:pointer}
 .layer-row:hover{background:#eef3eb}

@@ -1,5 +1,6 @@
 import type { FilterSpecification, Map as MapLibreMap } from 'maplibre-gl'
 import type { Geometry } from 'geojson'
+import { routeMode, TRANSPORT } from './transport'
 
 export type Selection = {
   id: string
@@ -26,9 +27,18 @@ export function addSelectionLayers(map: MapLibreMap) {
   })
   map.addSource('selected-extra', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
   map.addLayer({ id: 'selected-route', type: 'line', source: 'selected-extra',
-    paint: { 'line-color': '#ed8228', 'line-width': 6 } })
+    filter: ['==', ['get', '_selectionKind'], 'route'],
+    paint: { 'line-color': ['get', 'Color'], 'line-width': 6 } })
   map.addLayer({ id: 'selected-poi', type: 'circle', source: 'selected-extra',
+    filter: ['==', ['get', '_selectionKind'], 'poi'],
     paint: { 'circle-radius': 9, 'circle-color': '#ed8228', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
+}
+
+function selectedRouteColor(selection: Selection): string {
+  const color = selection.properties.Color
+  if (typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color)) return color
+  const mode = routeMode(selection.properties.Transport)
+  return mode ? TRANSPORT[mode].color : '#ed8228'
 }
 
 export function showSelection(map: MapLibreMap, selection: Selection | null, geometry?: Geometry) {
@@ -39,5 +49,6 @@ export function showSelection(map: MapLibreMap, selection: Selection | null, geo
   map.setFilter('selected-road', roadFilter)
   const source = map.getSource<import('maplibre-gl').GeoJSONSource>('selected-extra')
   if (source) source.setData({ type: 'FeatureCollection', features: selection && geometry && (selection.kind === 'poi' || selection.kind === 'route') ?
-    [{ type: 'Feature', properties: {}, geometry }] : [] })
+    [{ type: 'Feature', properties: { _selectionKind: selection.kind,
+      Color: selection.kind === 'route' ? selectedRouteColor(selection) : undefined }, geometry }] : [] })
 }
