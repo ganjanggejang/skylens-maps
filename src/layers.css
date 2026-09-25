@@ -1,0 +1,14 @@
+.panel{max-height:calc(100vh - 48px);overflow-y:auto}
+.layer-section{margin-top:19px;padding-top:14px;border-top:1px solid #e2e5dd}
+.layer-section h2{margin:0 0 10px;font-size:12px;letter-spacing:.04em;color:#52645a}
+.layer-list{display:flex;flex-direction:column;gap:2px}
+.layer-row{display:flex;align-items:center;gap:9px;min-height:40px;padding:5px 3px;border-radius:6px;cursor:pointer}
+.layer-row:hover{background:#eef3eb}
+.layer-row.is-disabled{opacity:.55;cursor:default}
+.layer-row.is-disabled:hover{background:transparent}
+.layer-row input{width:15px;height:15px;margin:0;accent-color:#357356;cursor:inherit}
+.layer-swatch{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid #35483e36}
+.layer-copy{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:12px;font-weight:650;line-height:1.25}
+.layer-copy small{font-size:10px;font-weight:400;color:#748078}
+.layer-error{margin-top:9px;padding:8px;border-radius:5px;background:#fff0ed;color:#8b342c;font-size:10px;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:700px){.panel{max-height:56vh}.layer-section{margin-top:12px;padding-top:10px}}

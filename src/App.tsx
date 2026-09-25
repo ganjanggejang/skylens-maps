@@ -2,17 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap, NavigationControl, setWorkerUrl, type LngLatBoundsLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { FeatureCollection, LineString, Polygon } from 'geojson'
+import { addBaseLayers, addDistrictLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setGroupVisibility, TOGGLEABLE_GROUPS, type GroupId, type Visibility } from './layers'
 
 type BuildingData = FeatureCollection<Polygon>
 type NetworkData = FeatureCollection<LineString>
 type Extent = [number, number, number, number]
 type Bounds = [[number, number], [number, number]]
+type SourceKey = 'buildings' | 'network' | 'area' | 'water'
+type SourceState = { state: 'idle' | 'loading' | 'ready' | 'empty' | 'error'; error?: string }
+type SourceStates = Record<SourceKey, SourceState>
+type Counts = Record<GroupId, number>
+type AreaInfo = { objects: Record<string, number>; error?: string }
+type WaterInfo = { coordinates?: [[number, number], [number, number], [number, number], [number, number]]; waterPixels?: number; error?: string }
 
 const DATA_ROOT = '/data'
+const INITIAL_COUNTS: Counts = { water: 0, buildings: 0, roads: 0, tracks: 0, pathways: 0, waterways: 0, districts: 0 }
 
 setWorkerUrl(workerUrl)
 
-async function loadCollection<G extends Polygon | LineString>(file: string, geometry: G['type']) {
+async function loadCollection<G extends Polygon | LineString>(file: string, geometry: G['type'], allowEmpty = false) {
   const response = await fetch(`${DATA_ROOT}/${file}`)
   if (!response.ok) throw new Error(`${file} 요청 실패 (HTTP ${response.status})`)
   let data: unknown
@@ -22,13 +30,72 @@ async function loadCollection<G extends Polygon | LineString>(file: string, geom
     throw new Error(`${file}의 JSON을 읽을 수 없습니다`)
   }
   if (!data || typeof data !== 'object' || !('type' in data) || data.type !== 'FeatureCollection' ||
-      !('features' in data) || !Array.isArray(data.features) || data.features.length === 0 ||
+      !('features' in data) || !Array.isArray(data.features) ||
+      (!allowEmpty && data.features.length === 0) ||
       data.features.some(feature => feature?.type !== 'Feature' || feature.geometry?.type !== geometry ||
         !Array.isArray(feature.geometry.coordinates) || !feature.properties ||
         typeof feature.properties.Object !== 'string')) {
     throw new Error(`${file}의 GeoJSON 구조가 올바르지 않습니다`)
   }
   return data as FeatureCollection<G>
+}
+
+async function loadExtraInfo(): Promise<{ area: AreaInfo; water: WaterInfo }> {
+  try {
+    const response = await fetch(`${DATA_ROOT}/manifest.json`)
+    if (!response.ok) throw new Error(`manifest.json 요청 실패 (HTTP ${response.status})`)
+    const manifest = await response.json()
+    let area: AreaInfo
+    try {
+      const entry = manifest?.files?.['Area_Boundary.json']
+      if (!entry || typeof entry !== 'object') throw new Error('Area 메타데이터가 없습니다')
+      if (entry.error) throw new Error(`Area_Boundary.json: ${entry.error}`)
+      if (!Number.isInteger(entry.features) || !entry.objects || typeof entry.objects !== 'object') {
+        throw new Error('Area 메타데이터 구조가 올바르지 않습니다')
+      }
+      area = { objects: entry.objects }
+    } catch (cause) {
+      area = { objects: {}, error: cause instanceof Error ? cause.message : String(cause) }
+    }
+
+    let water: WaterInfo
+    try {
+      const entry = manifest?.rasters?.water
+      if (!entry || typeof entry !== 'object') throw new Error('수심 메타데이터가 없습니다')
+      if (entry.error) throw new Error(`Depth.tif: ${entry.error}`)
+      if (entry.file !== 'water-mask.png' || !Number.isInteger(entry.waterPixels) || entry.waterPixels < 1 ||
+          !Array.isArray(entry.coordinates) || entry.coordinates.length !== 4 ||
+          entry.coordinates.some((point: unknown) => !Array.isArray(point) || point.length !== 2 ||
+            !point.every((value: unknown) => typeof value === 'number' && Number.isFinite(value)))) {
+        throw new Error('수심 메타데이터 구조가 올바르지 않습니다')
+      }
+      water = { coordinates: entry.coordinates, waterPixels: entry.waterPixels }
+    } catch (cause) {
+      water = { error: cause instanceof Error ? cause.message : String(cause) }
+    }
+    return { area, water }
+  } catch (cause) {
+    const error = cause instanceof Error ? cause.message : String(cause)
+    return { area: { objects: {}, error }, water: { error } }
+  }
+}
+
+function loadWaterImage(): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error('water-mask.png 이미지를 불러올 수 없습니다'))
+    image.src = `${DATA_ROOT}/water-mask.png`
+  })
+}
+
+function countObjects(data: BuildingData | NetworkData | FeatureCollection<Polygon>) {
+  const counts: Record<string, number> = Object.create(null)
+  for (const feature of data.features) {
+    const object = feature.properties?.Object
+    if (typeof object === 'string') counts[object] = (counts[object] ?? 0) + 1
+  }
+  return counts
 }
 
 function extendBounds(coordinates: unknown, bounds: Extent): void {
@@ -57,15 +124,11 @@ function expandBounds(bounds: Bounds): Bounds {
   const [[west, south], [east, north]] = bounds
   const longitudeMargin = (east - west) * 0.1
   const latitudeMargin = (north - south) * 0.1
-  return [
-    [west - longitudeMargin, south - latitudeMargin],
-    [east + longitudeMargin, north + latitudeMargin],
-  ]
+  return [[west - longitudeMargin, south - latitudeMargin], [east + longitudeMargin, north + latitudeMargin]]
 }
 
 function fitPadding() {
-  const narrow = window.innerWidth < 700
-  return narrow ? { top: 150, bottom: 90, left: 28, right: 28 } :
+  return window.innerWidth < 700 ? { top: 150, bottom: 90, left: 28, right: 28 } :
     { top: 80, bottom: 80, left: 320, right: 80 }
 }
 
@@ -74,18 +137,12 @@ function overviewPadding(map: MapLibreMap) {
 }
 
 function fit(map: MapLibreMap, bounds: LngLatBoundsLike, overview = false) {
-  map.fitBounds(bounds, {
-    padding: overview ? overviewPadding(map) : fitPadding(),
-    maxZoom: 15,
-    duration: 650,
-  })
+  map.fitBounds(bounds, { padding: overview ? overviewPadding(map) : fitPadding(), maxZoom: 15, duration: 650 })
 }
 
 function constrainMap(map: MapLibreMap, all: Bounds) {
   const minimumView = map.cameraForBounds(all, { padding: overviewPadding(map), maxZoom: 15 })
-  if (typeof minimumView?.zoom === 'number') {
-    map.setMinZoom(Math.max(0, minimumView.zoom - 0.1))
-  }
+  if (typeof minimumView?.zoom === 'number') map.setMinZoom(Math.max(0, minimumView.zoom - 0.1))
   map.setMaxBounds(expandBounds(all))
 }
 
@@ -93,42 +150,147 @@ export function App() {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const extentsRef = useRef<{ city: Bounds; all: Bounds } | null>(null)
+  const visibilityRef = useRef<Visibility>({ ...INITIAL_VISIBILITY })
+  const areaPromiseRef = useRef<Promise<void> | null>(null)
+  const waterInfoRef = useRef<WaterInfo | null>(null)
+  const waterPromiseRef = useRef<Promise<void> | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
-  const [counts, setCounts] = useState({ buildings: 0, roads: 0 })
+  const [visibility, setVisibility] = useState<Visibility>({ ...INITIAL_VISIBILITY })
+  const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS)
+  const [sourceStates, setSourceStates] = useState<SourceStates>({
+    buildings: { state: 'loading' }, network: { state: 'loading' }, area: { state: 'idle' }, water: { state: 'idle' },
+  })
+
+  function updateSource(key: SourceKey, state: SourceState) {
+    setSourceStates(previous => ({ ...previous, [key]: state }))
+  }
+
+  function loadArea() {
+    const map = mapRef.current
+    if (!map || map.getSource('area') || areaPromiseRef.current) return
+    updateSource('area', { state: 'loading' })
+    const promise = loadCollection<Polygon>('Area_Boundary.json', 'Polygon', true)
+      .then(data => {
+        if (mapRef.current !== map) return
+        if (data.features.length === 0) {
+          updateSource('area', { state: 'empty' })
+          visibilityRef.current = { ...visibilityRef.current, districts: false }
+          setVisibility({ ...visibilityRef.current })
+          setCounts(previous => ({ ...previous, districts: 0 }))
+          return
+        }
+        const objects = countObjects(data)
+        map.addSource('area', { type: 'geojson', data })
+        addDistrictLayers(map, objects)
+        setCounts(previous => ({ ...previous, districts: objects.District ?? 0 }))
+        if (!objects.District) {
+          visibilityRef.current = {
+            ...visibilityRef.current,
+            districts: false,
+          }
+          setVisibility({ ...visibilityRef.current })
+        }
+        setGroupVisibility(map, 'districts', visibilityRef.current.districts)
+        updateSource('area', { state: 'ready' })
+      })
+      .catch(cause => {
+        if (mapRef.current !== map) return
+        visibilityRef.current = { ...visibilityRef.current, districts: false }
+        setVisibility({ ...visibilityRef.current })
+        updateSource('area', { state: 'error', error: cause instanceof Error ? cause.message : String(cause) })
+      })
+      .finally(() => { areaPromiseRef.current = null })
+    areaPromiseRef.current = promise
+  }
+
+  function loadWater() {
+    const map = mapRef.current
+    const info = waterInfoRef.current
+    if (!map || !info?.coordinates || map.getSource('water') || waterPromiseRef.current) return
+    updateSource('water', { state: 'loading' })
+    const promise = loadWaterImage()
+      .then(image => {
+        if (mapRef.current !== map) return
+        addWaterLayer(map, info.coordinates!, image)
+        setGroupVisibility(map, 'water', visibilityRef.current.water)
+        updateSource('water', { state: 'ready' })
+      })
+      .catch(cause => {
+        if (mapRef.current !== map) return
+        if (map.getLayer('water-raster')) map.removeLayer('water-raster')
+        if (map.getSource('water')) map.removeSource('water')
+        updateSource('water', { state: 'error', error: cause instanceof Error ? cause.message : String(cause) })
+      })
+      .finally(() => { waterPromiseRef.current = null })
+    waterPromiseRef.current = promise
+  }
+
+  function toggleGroup(id: GroupId) {
+    if (ALWAYS_VISIBLE.has(id)) return
+    const next = !visibilityRef.current[id]
+    visibilityRef.current = { ...visibilityRef.current, [id]: next }
+    setVisibility({ ...visibilityRef.current })
+    const map = mapRef.current
+    if (!map) return
+    if (GROUPS[id].source === 'area' && next && !map.getSource('area')) loadArea()
+    else setGroupVisibility(map, id, next)
+  }
 
   useEffect(() => {
     let cancelled = false
     let map: MapLibreMap | null = null
+    let mapReady = false
+
+    async function loadRequired<G extends Polygon | LineString>(key: SourceKey, file: string, geometry: G['type']) {
+      try {
+        const data = await loadCollection<G>(file, geometry)
+        if (!cancelled) updateSource(key, { state: 'ready' })
+        return data
+      } catch (cause) {
+        if (!cancelled) updateSource(key, { state: 'error', error: cause instanceof Error ? cause.message : String(cause) })
+        throw cause
+      }
+    }
 
     async function start() {
       try {
-        const [buildings, network] = await Promise.all([
-          loadCollection<Polygon>('Building_Boundary.json', 'Polygon'),
-          loadCollection<LineString>('Network_Centerline.json', 'LineString'),
+        const [buildings, network, extraInfo] = await Promise.all([
+          loadRequired<Polygon>('buildings', 'Building_Boundary.json', 'Polygon'),
+          loadRequired<LineString>('network', 'Network_Centerline.json', 'LineString'),
+          loadExtraInfo(),
         ])
-        const roads = network.features.filter(feature => feature.properties?.Object === 'Road')
-        if (roads.length === 0) throw new Error('Network_Centerline.json에 도로가 없습니다')
+        if (cancelled || !containerRef.current) return
+        const networkObjects = countObjects(network)
+        if (!networkObjects.Road) throw new Error('Network_Centerline.json에 도로가 없습니다')
         const city = getBounds([buildings])
         const all = getBounds([buildings, network])
-        if (cancelled || !containerRef.current) return
-
-        setCounts({ buildings: buildings.features.length, roads: roads.length })
+        const { area: areaInfo, water: waterInfo } = extraInfo
+        setCounts({
+          water: waterInfo.waterPixels ? 1 : 0,
+          buildings: buildings.features.length,
+          roads: networkObjects.Road ?? 0,
+          tracks: networkObjects.Track ?? 0,
+          pathways: networkObjects.Pathway ?? 0,
+          waterways: networkObjects.Waterway ?? 0,
+          districts: areaInfo.objects.District ?? 0,
+        })
+        if (areaInfo.error) updateSource('area', { state: 'error', error: areaInfo.error })
+        else if (!areaInfo.objects.District) updateSource('area', { state: 'empty' })
+        if (waterInfo.error || !waterInfo.coordinates) {
+          updateSource('water', { state: 'error', error: waterInfo.error ?? '수심 데이터가 없습니다' })
+        }
+        waterInfoRef.current = waterInfo
         extentsRef.current = { city, all }
+
         const currentMap = new MapLibreMap({
           container: containerRef.current,
           style: {
-            version: 8,
-            sources: {},
+            version: 8, sources: {},
             layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e8ece8' } }],
           },
-          center: [0, 0],
-          zoom: 10,
-          pitch: 0,
-          maxPitch: 0,
-          dragRotate: false,
-          renderWorldCopies: false,
-          attributionControl: false,
+          center: [0, 0], zoom: 10, pitch: 0, maxPitch: 0,
+          dragRotate: false, renderWorldCopies: false, attributionControl: false,
         })
         map = currentMap
         mapRef.current = currentMap
@@ -138,30 +300,16 @@ export function App() {
           if (cancelled) return
           currentMap.addSource('buildings', { type: 'geojson', data: buildings })
           currentMap.addSource('network', { type: 'geojson', data: network })
-          currentMap.addLayer({
-            id: 'building-fill', type: 'fill', source: 'buildings',
-            paint: { 'fill-color': '#c49e86', 'fill-opacity': 0.9 },
-          })
-          currentMap.addLayer({
-            id: 'building-outline', type: 'line', source: 'buildings',
-            paint: { 'line-color': '#6f584d', 'line-width': 1 },
-          })
-          currentMap.addLayer({
-            id: 'road-casing', type: 'line', source: 'network', filter: ['==', ['get', 'Object'], 'Road'],
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': '#6f7977', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 15, 7] },
-          })
-          currentMap.addLayer({
-            id: 'road-line', type: 'line', source: 'network', filter: ['==', ['get', 'Object'], 'Road'],
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': '#fffdf6', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.8, 15, 5] },
-          })
+          addBaseLayers(currentMap)
+          for (const id of GROUP_ORDER) setGroupVisibility(currentMap, id, visibilityRef.current[id])
           constrainMap(currentMap, all)
           fit(currentMap, city)
+          mapReady = true
           setStatus('ready')
+          if (waterInfo.coordinates) loadWater()
         })
         currentMap.on('error', event => {
-          if (!cancelled) {
+          if (!cancelled && !mapReady) {
             setError(`지도 렌더링 오류: ${event.error?.message ?? '알 수 없는 오류'}`)
             setStatus('error')
           }
@@ -198,6 +346,26 @@ export function App() {
             <button type="button" onClick={() => extentsRef.current && mapRef.current && fit(mapRef.current, extentsRef.current.city)}>도심 보기</button>
             <button type="button" onClick={() => extentsRef.current && mapRef.current && fit(mapRef.current, extentsRef.current.all, true)}>전체 보기</button>
           </div>
+          {sourceStates.water.state === 'error' && <div className="layer-error" role="status">수역 데이터: {sourceStates.water.error}</div>}
+          <section className="layer-section" aria-label="지도 레이어">
+            <h2>레이어</h2>
+            <div className="layer-list">
+              {TOGGLEABLE_GROUPS.map(id => {
+                const group = GROUPS[id]
+                const source = sourceStates[group.source]
+                const unavailable = counts[id] === 0
+                const note = source.state === 'error' ? (unavailable ? '로드 오류' : '오류 · 다시 켜기') :
+                  unavailable ? '데이터 없음' : source.state === 'loading' ? '불러오는 중' : source.state === 'idle' ?
+                    `${counts[id].toLocaleString('ko-KR')}개 · 켜면 로드` : `${counts[id].toLocaleString('ko-KR')}개`
+                return <label key={id} className={`layer-row${unavailable ? ' is-disabled' : ''}`}>
+                  <input type="checkbox" checked={visibility[id]} disabled={unavailable} onChange={() => toggleGroup(id)} />
+                  <span className="layer-swatch" style={{ backgroundColor: group.color }} aria-hidden="true" />
+                  <span className="layer-copy"><span>{group.label}</span><small>{note}</small></span>
+                </label>
+              })}
+            </div>
+            {sourceStates.area.state === 'error' && <div className="layer-error" role="status">행정구역 데이터: {sourceStates.area.error}</div>}
+          </section>
         </>}
         {status === 'loading' && <p className="notice" role="status">지도 데이터를 불러오는 중…</p>}
         {status === 'error' && <div className="error" role="alert">
@@ -206,7 +374,7 @@ export function App() {
           <button type="button" onClick={() => window.location.reload()}>다시 시도</button>
         </div>}
       </header>
-      <div className="map-note">배경지도 없이 Carto 좌표를 그대로 표시합니다.</div>
+      <div className="map-note">연한 회색은 육지, 파란색은 수심 데이터의 수역입니다.</div>
     </main>
   )
 }
