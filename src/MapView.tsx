@@ -165,8 +165,8 @@ function geometryBounds(coordinates: unknown): Bounds {
 
 function expandBounds(bounds: Bounds): Bounds {
   const [[west, south], [east, north]] = bounds
-  const longitudeMargin = (east - west) * 0.1
-  const latitudeMargin = (north - south) * 0.1
+  const longitudeMargin = (east - west) * 0.65
+  const latitudeMargin = (north - south) * 0.65
   return [[west - longitudeMargin, south - latitudeMargin], [east + longitudeMargin, north + latitudeMargin]]
 }
 
@@ -185,7 +185,7 @@ function fit(map: MapLibreMap, bounds: LngLatBoundsLike) {
 
 function constrainMap(map: MapLibreMap, all: Bounds) {
   const minimumView = map.cameraForBounds(all, { padding: overviewPadding(map), maxZoom: 15 })
-  if (typeof minimumView?.zoom === 'number') map.setMinZoom(Math.max(0, minimumView.zoom - 0.1))
+  if (typeof minimumView?.zoom === 'number') map.setMinZoom(Math.max(0, minimumView.zoom - 1))
   map.setMaxBounds(expandBounds(all))
 }
 
