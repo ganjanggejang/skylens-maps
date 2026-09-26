@@ -113,12 +113,13 @@ The Options controls and status were verified in-game on 2026-09-25.
 builds with the official Toolchain in Release configuration, audits the staged
 mod directory, and creates a ZIP plus SHA-256 in `artifacts/release/`. The ZIP
 contains the mod DLL and native game UI binaries, the prebuilt browser app,
-bilingual release notes, and license notices. The publisher reads the thumbnail
+bilingual release notes, license notices, and the corresponding `SOURCE.zip`
+archive. The publisher reads the thumbnail
 from `Properties/Thumbnail.png` in the source project. The
 audit rejects Carto DLLs, source files, city data, and development directories.
 `PublishConfiguration.xml` declares Carto's Paradox Mods ID 87428 as a
 dependency, supports game 1.6.*, and is Public. The source and original
-artwork are All rights reserved; bundled web dependency licenses are included.
+artwork are licensed under GPL-3.0-only; bundled web dependency licenses are included.
 
 On 2026-09-26 the release ZIP was extracted separately and passed the local
 HTTP route check. Its 15 files were installed into the game's `Mods/CityMap`

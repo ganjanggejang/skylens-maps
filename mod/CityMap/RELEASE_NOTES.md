@@ -1,6 +1,6 @@
-# SKYLENS MAPS 0.1.1
+# SKYLENS MAPS 0.1.3
 
-Version 0.1.1 fixes web app discovery when SKYLENS MAPS is installed through a Paradox Mods subscription.
+Version 0.1.3 releases the original source code, documentation, and artwork under GPL-3.0-only. The package includes the complete license and corresponding source archive. Map behavior is unchanged.
 
 ## 한국어
 
@@ -24,4 +24,4 @@ Version 0.1.1 fixes web app discovery when SKYLENS MAPS is installed through a P
 
 ## Credits and licenses
 
-Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are All rights reserved; see `LICENSE.txt`.
+Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.3 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps

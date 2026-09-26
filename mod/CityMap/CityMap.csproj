@@ -3,7 +3,7 @@
     <Configurations>Debug;Release</Configurations>
     <AssemblyName>CityMap</AssemblyName>
     <RootNamespace>CityMap</RootNamespace>
-    <Version>0.1.1</Version>
+    <Version>0.1.3</Version>
     <PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
     <CityMapGamePath Condition="'$(CityMapGamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II</CityMapGamePath>
     <CityMapToolPath Condition="'$(CityMapToolPath)' == ''">$(CityMapGamePath)\Cities2_Data\Content\Game\.ModdingToolchain</CityMapToolPath>
@@ -32,14 +32,19 @@
   <Target Name="BuildCityMapWeb" BeforeTargets="BeforeBuild" Condition="'$(CityMapCompileOnly)' != 'true'">
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)\..\.." Command="npm.cmd run build:app" />
   </Target>
+  <Target Name="BuildCityMapSourceArchive" BeforeTargets="BeforeBuild" Condition="'$(CityMapCompileOnly)' != 'true' and '$(Configuration)' == 'Release'">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\..\.." Command="python scripts/package-release.py --source-only" />
+  </Target>
   <Target Name="DeployCityMapWeb" BeforeTargets="DeployWIP" Condition="'$(CityMapCompileOnly)' != 'true'">
     <ItemGroup>
       <CityMapWebFiles Include="$(MSBuildProjectDirectory)\..\..\dist\**\*.*" />
     </ItemGroup>
     <Error Condition="!Exists('$(MSBuildProjectDirectory)\..\..\dist\index.html')" Text="City Map web build is missing." />
     <Copy SourceFiles="@(CityMapWebFiles)" DestinationFiles="@(CityMapWebFiles->'$(OutDir)\web\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\RELEASE_NOTES.md;$(MSBuildProjectDirectory)\..\..\LICENSE.txt;$(MSBuildProjectDirectory)\Properties\THIRD_PARTY_NOTICES.txt"
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\RELEASE_NOTES.md;$(MSBuildProjectDirectory)\..\..\LICENSE.txt;$(MSBuildProjectDirectory)\..\..\COPYRIGHT.txt;$(MSBuildProjectDirectory)\Properties\THIRD_PARTY_NOTICES.txt"
           DestinationFolder="$(OutDir)" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\..\artifacts\release\SkylensMaps-$(Version)-source.zip"
+          DestinationFiles="$(OutDir)\SOURCE.zip" Condition="'$(Configuration)' == 'Release'" />
   </Target>
 
   <!-- Keep the official postprocess/deploy order; scope runtime fallback to

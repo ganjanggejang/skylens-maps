@@ -33,12 +33,14 @@ SKYLENS MAPS opens your city map with **ONE CLICK**.
 - 옵션 > SKYLENS MAPS 에서 LAUNCH SKYLENS MAPS 클릭만 하면 끝입니다.
 - 처음 지도 생성 시 30초 정도 소요됩니다.
 Route times, stops and transit connections are estimates from exported data, not live game routing. The map is available while the game and mod are running. For limitations, logs and issue reporting, see RELEASE_NOTES.md in the mod package.
+
+The original SKYLENS MAPS code and artwork are licensed under GPL-3.0-only. Corresponding source for 0.1.3 is included as SOURCE.zip in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
   </LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
-  <ModVersion Value="0.1.1" />
+  <ModVersion Value="0.1.3" />
   <ChangeLog>
-Fixed web app discovery for Paradox Mods subscriptions. City exports now enable available Carto data selections and retain additional Carto output files in snapshots.
+Released SKYLENS MAPS source code, documentation, and original artwork under GPLv3. Added the complete license, copyright and source notices to the mod package. Updated the project documentation and contribution guide. Map behavior is unchanged.
   </ChangeLog>
   <GameVersion Value="1.6.*" />
   <Dependency Id="87428" />

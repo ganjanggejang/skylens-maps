@@ -1,54 +1,46 @@
-﻿# Skylens Maps
+# SKYLENS MAPS
 
-Cities: Skylines II의 현재 도시를 Carto로 추출해 기본 브라우저에 표시하는 모드입니다. 건물·도로·POI·노선 검색, 수역·대중교통 표시, 차량·대중교통 예상 경로를 제공합니다. 외부 배경지도나 API 키는 필요하지 않습니다.
+SKYLENS MAPS is a Cities: Skylines II mod that exports the current city with [Carto](https://mods.paradoxplaza.com/mods/87428/Windows) and opens an interactive map in your default browser. Search buildings, roads, points of interest, and transit routes; inspect water and transit layers; and get estimated driving and transit directions. The map uses your local export. Players need no external basemap, API key, or Node.js installation.
 
-## 모드 설치와 사용
+## Install and use
 
-게임 1.6 계열에서 [Carto](https://mods.paradoxplaza.com/mods/87428/Windows)와 SKYLENS MAPS를 설치하고 같은 플레이셋에서 활성화합니다. 도시를 불러온 뒤 **옵션 → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**를 누르면 기본 브라우저로 지도가 열립니다. 일반 사용자는 Node.js를 설치할 필요가 없습니다. `Reopen map`은 현재 도시의 마지막 지도를 다시 엽니다. 게임 종료 후에는 로컬 지도 서버도 종료됩니다.
+1. On Cities: Skylines II 1.6.x, add [Carto](https://mods.paradoxplaza.com/mods/87428/Windows) and [SKYLENS MAPS](https://mods.paradoxplaza.com/mods/160718/Windows) to the same playset and enable both.
+2. Load a city. Open **Options → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**.
+3. Wait for Carto to export the city and for the browser to open. **Reopen map** opens the latest map for the loaded city without another export.
 
-출시용 비공개 패키지는 `python scripts/package-release.py`로 만듭니다. 개발 환경의 공식 모딩 툴체인으로 Release 빌드를 수행하고 `artifacts/release/SkylensMaps-<version>.zip`과 SHA-256 파일을 생성합니다. ZIP의 `CityMap/` 폴더에는 Carto나 도시 데이터가 들어 있지 않습니다. 설치 안내, 알려진 제한, 로그 위치는 [RELEASE_NOTES.md](mod/CityMap/RELEASE_NOTES.md)에 적었습니다. 소스와 원본 그림은 [All rights reserved](LICENSE.txt)입니다.
+The local map server runs only while the game and mod are running. Existing browser tabs stop loading map data after the game closes. Each export creates a snapshot under the game's `ModsData/CityMap/snapshots/` directory. The mod download does not include Carto or your city data.
 
-## 개발 서버 실행
+## Map features
 
-Node.js 20.19 이상과 `exported_files/GeoJSON/Building_Boundary.json`, `Network_Centerline.json`이 필요합니다. `Area_Boundary.json`, `POI_Location.json`, `Route_Centerline.json`, `exported_files/GeoTIFF/Depth.tif`는 선택 파일입니다.
+- Browse buildings, roads, railways, and water; optionally show paths, waterways, districts when present, and transit layers.
+- Click a building, road, route, or transit stop to inspect its exported details. Select a transit route to see nearby stops; select a transport facility to see nearby route candidates.
+- Search building names, brands, addresses, roads, POIs, and routes. Results can be used as an origin or destination.
+- Compare estimated driving and public transit routes. Driving follows exported road centerlines and one-way direction. Transit uses passenger routes, nearby stops, walking links, and up to two transfers.
+- Switch the interface between English and Korean. The choice is stored in the browser; names and addresses from Carto remain in their original language.
+
+Directions are estimates, not the game's route planner. The export does not provide turn restrictions, stop-to-route IDs, exact stop order, schedules, or service direction. Transit links and waiting times are inferred, and transit routes are treated as bidirectional. Map orientation and distance accuracy have not been validated against the game view. Large exports can briefly pause the game, and water is unavailable if depth-mask generation fails. See [release notes](mod/CityMap/RELEASE_NOTES.md) for player-facing limitations and troubleshooting.
+
+## Develop locally
+
+The web app uses React, TypeScript, Vite, and MapLibre GL JS. Development requires Node.js 20.19 or newer, the dependencies in `package-lock.json`, and a local Carto export in `exported_files/`. The development preparation script requires the seven GeoJSON files (`Area_Boundary`, `Building_Boundary`, `Network_Boundary`, `Network_Centerline`, `POI_Location`, `Route_Centerline`, and `Zoning_Boundary`, each with `.json`), four GeoTIFFs (`Depth`, `Elevation`, `WorldDepth`, and `WorldElevation`, each with `.tif`), and the exported `Styles/` directory. The in-game mod performs its own export and does not need these files in the repository.
 
 ```powershell
-npm install
+npm ci
 npm run dev
 ```
 
-브라우저에서 <http://localhost:3000>을 엽니다. 포트 3000이 이미 사용 중이면 다른 포트로 넘어가지 않고 오류가 납니다.
+Open <http://localhost:3000>. The `predev` script validates and copies the local export into ignored `public/data/`, creates a manifest, and derives the water mask. Port 3000 is fixed in development. Useful checks:
 
-`npm run dev`와 `npm run build`는 실행 전에 `npm run prepare:data`를 호출합니다. 이 명령은 건물·중심선·선택적 Area 원본의 구조와 좌표를 검사한 뒤 `public/data/`로 복사하고, 스냅샷 ID와 파일별 건수·범위·해시·Object 분포를 `manifest.json`에 기록합니다. `Depth.tif`가 있으면 좌표계와 NoData를 확인하고 투명한 `water-mask.png`를 생성합니다. Area나 수심 파일이 없거나 잘못된 경우에도 기본 지도는 실행되며, 해당 레이어에는 오류를 표시합니다. 원본 파일은 수정하지 않으며 생성한 데이터는 Git에서 제외합니다. 프로덕션 빌드는 `npm run build`, 빌드 결과 확인은 `npm run preview`로 실행합니다.
+```powershell
+npm run typecheck
+npm run test
+npm run build
+```
 
-POI와 노선 GeoJSON도 같은 명령에서 선택 데이터로 검사하고 복사합니다. 이 파일에 오류가 있어도 기본 지도는 실행되며 검색창에 일부 데이터가 빠졌음을 표시합니다.
+`npm run build` also prepares development data. `npm run build:app` builds only the browser bundle for the mod. Building the C# mod requires the installed game and its official Modding Toolchain; the project is [mod/CityMap/CityMap.csproj](mod/CityMap/CityMap.csproj). The [implementation record](docs/implementation.md) describes the web app and data contracts, and the [mod release record](docs/mod_release_plan.md) describes the completed game integration and packaging.
 
-지도는 건물 전체에 맞춰 시작합니다. 마우스 또는 터치로 이동·확대할 수 있으며, 전체 지도 크기에 맞춰 축소 한계와 이동 범위가 설정됩니다. 사이드바 가장자리의 버튼으로 메뉴를 접거나 펼칠 수 있습니다. 연한 회색은 육지, 파란색은 수심 데이터가 있는 수역입니다. 수역은 바다와 강을 따로 분류하지 않습니다. 수역·건물·도로·철도는 항상 표시합니다. 레이어 목록에서는 보행로·항로와 데이터가 있을 때의 행정구역을 켜고 끌 수 있습니다. 현재 Export에는 District가 없어 행정구역은 데이터 없음으로 표시됩니다.
+## Contribute and report issues
 
-사이드바의 **한국어 / English** 버튼으로 화면 언어를 전환할 수 있습니다. 선택한 언어는 브라우저에 저장되어 다음 방문에도 적용됩니다. GeoJSON에 들어 있는 건물·노선·정류장 이름과 주소는 원문으로 표시합니다.
+Issues and proposed changes are welcome through [GitHub Issues](https://github.com/ganjanggejang/skylens-maps/issues) and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting code, documentation, or artwork. Include reproduction steps, game/Carto/SKYLENS MAPS versions, the Options status, and relevant logs when reporting a bug. Do not post exported city snapshots or other private game data in a public issue.
 
-건물이나 도로를 클릭하면 지도에서 강조하고 사이드바에 원본 이름과 속성을 표시합니다. 건물 주소도 Export에 있는 필드로 구성합니다. 빈 곳을 클릭하거나 상세 패널의 닫기 버튼을 누르면 선택이 해제됩니다. 내부 ID는 현재 데이터 스냅샷 안에서만 유효하며 게임 ID가 아닙니다.
-
-검색창에서는 건물·도로·POI·노선의 이름과 주소를 부분 문자열로 검색합니다. 건물은 `Name`과 `Brand`를 모두 검색하며, 브랜드는 공백을 생략하거나 추가해도 찾을 수 있습니다. 같은 이름의 객체도 별도 결과로 표시합니다. 결과를 누르면 해당 위치로 이동하고 상세 정보가 열립니다. POI와 노선은 지도 초기 표시 후 읽으며, 로딩 중이거나 일부 파일을 읽지 못한 경우 결과 상태에 표시됩니다.
-
-건물의 `Name`이 기본 용도지역명인 `Zone`과 다르면 해당 이름을 제목으로 표시합니다. 기본 이름인 산업·사무·상업 건물은 `Brand`를 제목으로 표시하고, 브랜드가 없으면 `Name`으로 돌아갑니다. 제목과 다른 브랜드는 상세 정보와 검색 결과에 별도로 표시합니다.
-
-대중교통 레이어에서는 버스·기차·전차·지하철·선박·페리·항공의 정류장과 시설을 선택해 볼 수 있습니다. 버스·기차·전차·지하철·선박·페리는 노선도 표시합니다. 각 레이어는 기본적으로 꺼져 있으며, POI와 노선 파일은 지도 초기 표시 후 읽습니다. 데이터가 없거나 파일을 읽지 못하면 레이어 상태에 표시됩니다.
-
-노선을 클릭하면 다른 대중교통 노선과 마커를 숨기고 해당 노선과 인근 정류장만 표시하며, 사이드바에 정류장 이름과 주소를 나열합니다. 목록에서는 이름과 주소가 같은 정류장을 하나만 표시합니다. 목록의 정류장을 누르면 지도가 해당 위치로 부드럽게 이동하며 노선 선택은 유지됩니다. 상세 정보를 닫거나 빈 지도를 클릭하면 레이어 표시가 복원됩니다. Carto Export에 노선과 정류장의 연결 ID가 없으므로 정류장은 노선에서 50m 이내의 같은 교통수단 정류장 중 가까운 순서로 추정하며, `Stop` 수를 상한으로 사용합니다. 목록은 GeoJSON 노선의 시작점부터 선을 따라 정렬한 추정 순서입니다. 실제 게임 정차 순서와 다를 수 있습니다.
-
-분류가 `Public, Transportation`인 역·항구 등 교통 건물을 클릭하면 건물 위치의 교통 시설 POI와 인근 정류장을 통해 연결된 것으로 추정되는 노선을 지도와 상세 패널에 표시합니다. 목록에서 노선을 누르면 해당 노선 상세 정보로 이동합니다. 건물·정류장·노선 사이의 연결 ID가 없으므로 실제 운행 관계와 다를 수 있습니다.
-
-좌표는 Carto Export 값을 경도·위도 순서로 그대로 사용합니다. 게임 또는 QGIS 화면과 방향·정합성을 대조하는 작업은 아직 남아 있으며, 현 단계에서는 실측 거리나 위치 정확도를 보장하지 않습니다.
-
-## 길찾기
-
-사이드바의 **길찾기**에서 출발지와 도착지를 검색 결과로 확정하고 **경로 찾기**를 누르면 차량과 대중교통 예상 경로를 계산합니다. 건물·도로·POI 상세의 **출발지로 설정**과 **목적지로 설정**도 사용할 수 있습니다. 결과 카드를 누르면 지도 경로를 전환합니다.
-
-차량은 도로 중심선을 따라 일방통행 방향을 적용하고, 원형 교차로 내부에서 일반 도로 끝점과 정확히 일치하는 연결점도 이용합니다. 시간은 제한 속도의 80%와 접근 도보 4.5km/h를 사용한 추정치입니다. 현재 Carto Export에 회전 제한 정보가 없어 좌회전·유턴 금지 등은 적용하지 않습니다.
-
-대중교통은 여객 노선과 해당 수단의 여객 정류장만 사용합니다. 노선에서 50m 이내의 정류장을 원본 선형에 투영하고, `Stop` 수를 상한으로 정차 순서를 추정합니다. 출발·도착 접근은 각각 보행망 1km 이내, 환승 보행은 300m 이내이며 최대 2회 환승합니다. 보행망은 일반 도로와 보행로로 만들고 고속도로는 제외합니다. 탑승마다 평균 5분 대기, 환승마다 추가 2분을 반영합니다. 속도 가정은 버스 25, 전차 22, 지하철 40, 기차 60, 선박 30, 페리 20km/h입니다. 지도에는 원본 노선의 실제 부분 선형과 점선 보행 경로, 승하차 지점을 표시합니다.
-
-Export에는 노선·정류장의 연결 ID, 운행 방향, 시간표와 배차 간격이 없어 연결과 정차 순서는 추정이며 양방향 운행을 가정합니다. 대기 시간은 실시간 도착 정보가 아닌 평균값입니다. 도로와 정류장까지의 짧은 접근 연결, 건물 출입구도 추정이므로 실제 이동과 다를 수 있습니다.
-
-`npm run test`는 차량 방향·접속, 대중교통 정차·환승·대기·선형 계산과 현재 Export의 실제 여정 한 건을 검사합니다. `node scripts/inspect-routing.mjs`는 현재 Export의 도로 방향, 연결 성분, 거리 비율을 읽기 전용으로 진단합니다. 현재 측정 결과와 추정 기준은 [routing_diagnostics.md](routing_diagnostics.md)에 기록했습니다.
+The original SKYLENS MAPS code, documentation, and artwork are licensed under the **GNU General Public License v3.0 only** ([GPL-3.0-only](LICENSE.txt)); see the [copyright notice](COPYRIGHT.txt). Contributions are submitted under the same license. Third-party components retain their own terms in [THIRD_PARTY_NOTICES.txt](mod/CityMap/Properties/THIRD_PARTY_NOTICES.txt). Carto is a separate mod, and your exported city data is not part of this license grant.
