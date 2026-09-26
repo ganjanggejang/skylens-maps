@@ -58,7 +58,9 @@ namespace CityMap.Data
                 var input = FindSource(exportDirectory, "GeoJSON", source.File);
                 var info = GeoJsonInspector.Inspect(input, source.Geometry);
                 if (source.File == "Building_Boundary.json") buildingBounds = (double[])info["bounds"];
-                File.Copy(input, Path.Combine(ready, source.File));
+                var destination = Path.Combine(ready, "GeoJSON", source.File);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                File.Copy(input, destination);
                 files.Add(source.File, info);
             }
 
@@ -66,9 +68,17 @@ namespace CityMap.Data
             foreach (var raster in Rasters)
             {
                 cancellation.ThrowIfCancellationRequested();
-                var input = FindSource(exportDirectory, "GeoTIFF", raster);
-                File.Copy(input, Path.Combine(ready, raster));
-                cartoFiles.Add(raster, FileInfo(input));
+                FindSource(exportDirectory, "GeoTIFF", raster);
+            }
+            foreach (var input in Directory.GetFiles(exportDirectory, "*", SearchOption.AllDirectories))
+            {
+                cancellation.ThrowIfCancellationRequested();
+                var relative = input.Substring(exportDirectory.Length).TrimStart(Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar).Replace(Path.DirectorySeparatorChar, '/');
+                var destination = Path.Combine(ready, relative.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                if (!File.Exists(destination)) File.Copy(input, destination);
+                cartoFiles.Add(relative, FileInfo(input));
             }
             if (!Directory.Exists(stylesDirectory))
                 throw new DirectoryNotFoundException("Carto styles are missing: " + stylesDirectory);
@@ -98,12 +108,9 @@ namespace CityMap.Data
                 water = new Dictionary<string, object> { ["error"] = ex.Message };
             }
 
-            var parts = Sources.Select(source => source.File + ":" +
-                (files[source.File].TryGetValue("sha256", out var hash) ? hash : "unavailable")).ToList();
-            parts.AddRange(Rasters.Select(name => name + ":" + cartoFiles[name]["sha256"]));
-            parts.AddRange(styleFiles.Select(style => "Styles/" + style.Relative + ":" +
-                cartoFiles["Styles/" + style.Relative]["sha256"]));
-            parts.Insert(0, "CityMap-snapshot-layout-v2");
+            var parts = cartoFiles.OrderBy(item => item.Key, StringComparer.Ordinal)
+                .Select(item => item.Key + ":" + item.Value["sha256"]).ToList();
+            parts.Insert(0, "CityMap-snapshot-layout-v3");
             var datasetId = HashBytes(Encoding.UTF8.GetBytes(string.Join("\n", parts))).Substring(0, 16);
             var manifest = new Dictionary<string, object>
             {
@@ -123,7 +130,6 @@ namespace CityMap.Data
             {
                 if (Directory.Exists(published))
                     throw new IOException("Incomplete snapshot directory already exists: " + published);
-                // Move a flat private directory, then restore Carto's folder layout.
                 // The manifest is written last, after every file is in its final path.
                 var moved = false;
                 try
@@ -136,21 +142,6 @@ namespace CityMap.Data
                         {
                             Thread.Sleep(500);
                         }
-                    }
-                    Directory.CreateDirectory(Path.Combine(published, "GeoJSON"));
-                    Directory.CreateDirectory(Path.Combine(published, "GeoTIFF"));
-                    Directory.CreateDirectory(Path.Combine(published, "Shapefile"));
-                    foreach (var source in Sources)
-                    {
-                        cancellation.ThrowIfCancellationRequested();
-                        File.Move(Path.Combine(published, source.File),
-                            Path.Combine(published, "GeoJSON", source.File));
-                    }
-                    foreach (var raster in Rasters)
-                    {
-                        cancellation.ThrowIfCancellationRequested();
-                        File.Move(Path.Combine(published, raster),
-                            Path.Combine(published, "GeoTIFF", raster));
                     }
                     foreach (var style in styleFiles)
                     {

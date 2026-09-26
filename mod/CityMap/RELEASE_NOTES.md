@@ -8,7 +8,7 @@ Version 0.1.1 fixes web app discovery when SKYLENS MAPS is installed through a P
 
 **기능:** 건물·도로·POI·노선 검색, 수역과 대중교통 레이어, 차량 및 대중교통 예상 길찾기. 원본 Carto 데이터와 생성한 지도는 사용자 데이터의 `ModsData/CityMap/snapshots/`에 저장됩니다. 지도 서버는 게임이 실행 중일 때만 열립니다.
 
-**알려진 제한:** Carto의 내보내기 설정이 필요한 GeoJSON·GeoTIFF 전체를 생성해야 합니다. 대도시는 Carto 추출 중 게임 화면이 잠시 멈출 수 있습니다. 수역 마스크 생성이 실패하면 수역 레이어를 사용할 수 없습니다. 대중교통 정류장 연결·순서, 운행 방향·대기 시간과 차량 주행 시간은 추정치이며 실제 게임 경로 또는 시간표와 다를 수 있습니다. 지도 방향과 거리의 게임 화면 대비 정확도는 아직 검증 중입니다. 게임이나 모드가 종료되면 기존 브라우저 탭의 지도는 열리지 않습니다.
+**알려진 제한:** 모든 Carto 데이터 선택 항목을 활성화하므로 대도시는 추출 중 게임 화면이 잠시 멈추고 스냅샷 크기가 커질 수 있습니다. 수역 마스크 생성이 실패하면 수역 레이어를 사용할 수 없습니다. 대중교통 정류장 연결·순서, 운행 방향·대기 시간과 차량 주행 시간은 추정치이며 실제 게임 경로 또는 시간표와 다를 수 있습니다. 지도 방향과 거리의 게임 화면 대비 정확도는 아직 검증 중입니다. 게임이나 모드가 종료되면 기존 브라우저 탭의 지도는 열리지 않습니다.
 
 **문제 신고:** [GitHub Issues](https://github.com/ganjanggejang/skylens-maps/issues)에 게임 옵션의 SKYLENS MAPS 상태 메시지, 재현 순서, 게임·Carto·SKYLENS MAPS 버전과 로그를 첨부해 주세요. 로그는 `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Logs\`의 `CityMap` 로그와 같은 폴더의 `Player.log`에서 확인할 수 있습니다. 도시 원본 데이터가 들어 있는 `ModsData/CityMap/snapshots/`는 공개 이슈에 첨부하지 마세요.
 
@@ -18,7 +18,7 @@ Version 0.1.1 fixes web app discovery when SKYLENS MAPS is installed through a P
 
 **Features:** Search buildings, roads, POIs and routes; show water and transit layers; estimate driving and transit directions. Exported data and maps are stored under `ModsData/CityMap/snapshots/` in the game's user data. The local map server runs only while the game is running.
 
-**Known limitations:** Carto's settings must produce the complete required GeoJSON and GeoTIFF set. Exporting a large city may briefly pause the game. Water cannot be shown if mask generation fails. Transit stop links and order, direction and wait times, and driving times are estimates. Map orientation and distance accuracy against the game view have not yet been validated. Browser tabs stop loading the map after the game or mod closes.
+**Known limitations:** The export enables every Carto data selection, so a large city may briefly pause the game and produce a large snapshot. Water cannot be shown if mask generation fails. Transit stop links and order, direction and wait times, and driving times are estimates. Map orientation and distance accuracy against the game view have not yet been validated. Browser tabs stop loading the map after the game or mod closes.
 
 **Report issues:** Use [GitHub Issues](https://github.com/ganjanggejang/skylens-maps/issues) and include the SKYLENS MAPS Options status, steps to reproduce, game/Carto/SKYLENS MAPS versions, and logs. Look in `%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Logs\` for the `CityMap` log and `Player.log`. Do not attach `ModsData/CityMap/snapshots/` to public reports; it contains your city data.
 

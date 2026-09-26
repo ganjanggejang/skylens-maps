@@ -1,4 +1,4 @@
-"""Build and audit a local, unpublished Cities: Skylines II mod package."""
+"""Build and audit a local Cities: Skylines II mod package."""
 
 from __future__ import annotations
 
@@ -51,12 +51,15 @@ def audit() -> tuple[str, list[Path]]:
     version = value("ModVersion")
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("PublishConfiguration.xml needs a semantic ModVersion")
+    change_log = value("ChangeLog") or publish.findtext("ChangeLog", "")
+    if value("ModId") and not change_log.strip():
+        raise ValueError("NewVersion publishing requires a ChangeLog")
     if value("Dependency", "Id") != "87428":
         raise ValueError("Carto Paradox Mods dependency 87428 is missing")
     if value("GameVersion") != "1.6.*":
         raise ValueError("Review the supported game version before packaging")
-    if value("AccessLevel") != "Private":
-        raise ValueError("Local packaging expects Private access; publishing is a separate decision")
+    if value("AccessLevel") not in {"Private", "Public"}:
+        raise ValueError("AccessLevel must be Private or Public")
     if value("Thumbnail") != "Properties/Thumbnail.png":
         raise ValueError("Publisher thumbnail must point to Properties/Thumbnail.png")
     if not (CONFIG.parent.parent / value("Thumbnail")).is_file():

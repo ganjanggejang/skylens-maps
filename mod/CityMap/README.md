@@ -16,9 +16,12 @@ hashing, and water-mask conversion then run on a worker.
 ## Carto export contract
 
 City Map calls `Carto.Settings.GetOptions()` through the installed Carto assembly,
-then changes only `CustomDirectory`, `CompletionDialog`, and `CompletionSound`
-for this job. It does not change the user's saved Carto settings. With the
-currently observed settings, Carto must write all of these files:
+then enables every system, feature, vector geometry, available property, and
+raster kind reported by that Carto version. It also enables optional data such
+as inactive routes and map tile statistics. The export uses GeoJSON, GeoTIFF,
+`{Feature}` filenames, and Int16 rasters so the map can read its core layers.
+These changes apply to this export only; the user's saved Carto settings are
+not changed. The following core files remain required:
 
 - GeoJSON: `Area_Boundary.json`, `Building_Boundary.json`,
   `Network_Boundary.json`, `Network_Centerline.json`, `POI_Location.json`,
@@ -26,15 +29,15 @@ currently observed settings, Carto must write all of these files:
 - GeoTIFF: `Depth.tif`, `Elevation.tif`, `WorldDepth.tif`,
   `WorldElevation.tif`.
 
-The adapter checks both `ExportResult.FilesWritten` and the actual files. If
-Carto settings no longer produce exactly this set, it reports missing or extra
-names and does not publish an incomplete snapshot. QML styles are copied from Carto's
+The adapter checks both `ExportResult.FilesWritten` and the actual files. Missing
+core files stop publication. Every additional GeoJSON or GeoTIFF file Carto
+produces is retained in the snapshot. QML styles are copied from Carto's
 `ModsData/Carto/Styles` directory.
 
 ## Snapshot contract
 
 Carto writes to a unique `ModsData/CityMap/staging/<job-id>/` directory. The
-builder validates the seven GeoJSON collections, copies all eleven source
+builder validates the seven core GeoJSON collections, copies all Carto source
 files byte-for-byte, and copies the QML styles. The published snapshot retains
 Carto's `GeoJSON/`, `GeoTIFF/`, `Styles/Plan`, `Styles/Street`, and `Styles/Topo`
 folders. The web app reads GeoJSON from that structure. The snapshot also
@@ -43,7 +46,7 @@ contains `manifest.json` and a derived
 
 The manifest records feature counts, byte sizes, SHA-256 hashes, bounds, and
 `Object` counts for GeoJSON; it records source-file hashes under `cartoFiles`.
-All eleven raw data files are required. Valid empty GeoJSON collections are
+The eleven core raw data files are required. Valid empty GeoJSON collections are
 accepted. Invalid or missing raw files stop publication. A water-mask
 conversion failure is recorded as a warning; the raw `Depth.tif` remains in
 the snapshot. The private bundle is moved into
@@ -114,7 +117,7 @@ bilingual release notes, and license notices. The publisher reads the thumbnail
 from `Properties/Thumbnail.png` in the source project. The
 audit rejects Carto DLLs, source files, city data, and development directories.
 `PublishConfiguration.xml` declares Carto's Paradox Mods ID 87428 as a
-dependency, supports game 1.6.*, and remains Private. The source and original
+dependency, supports game 1.6.*, and is Public. The source and original
 artwork are All rights reserved; bundled web dependency licenses are included.
 
 On 2026-09-26 the release ZIP was extracted separately and passed the local

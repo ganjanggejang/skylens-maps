@@ -3,18 +3,44 @@
   <DisplayName Value="SKYLENS MAPS" />
   <ShortDescription Value="Export the current city with Carto and explore it in your browser." />
   <LongDescription>
-SKYLENS MAPS exports the loaded city through Carto and opens a local map in your default browser at ONE CLICK. Search buildings, roads, POIs and routes; view water and transit layers; estimate driving and transit routes. No Node.js, external map service or API key is required.
+SKYLENS MAPS opens your city map with **ONE CLICK**. 
 
-Install and enable Carto (Paradox Mods 87428) alongside this mod. Load a city, then choose Options &gt; SKYLENS MAPS &gt; Main &gt; LAUNCH SKYLENS MAPS. The first export may pause the game while Carto runs. Reopen map uses the last export for the loaded city.
+###  Features 
+- Search all buildings, roads, stations and routes in your city
+- Search driving and transit routes, just like using Google Maps in the real world
+- View transit layers
 
-한국어: Carto와 이 모드를 활성화하고 도시를 불러온 뒤 옵션 &gt; SKYLENS MAPS &gt; Main &gt; LAUNCH SKYLENS MAPS를 누르세요. 기본 브라우저에서 검색, 수역·대중교통 표시, 차량·대중교통 예상 경로를 볼 수 있습니다.
+### How to Use
 
+- choose Options > SKYLENS MAPS  and click LAUNCH SKYLENS MAPS. Done.
+- The initial map generation may take about 30 seconds
+
+### Required Mods
+- Carto must be installed
+
+
+###  Korean Description
+단 한 번의 클릭으로 지도를 사용해보세요
+
+기능
+
+- 모든 건물, 도로, 대중교통 역/정류장, 도로 검색
+- 네이버 지도/구글 지도를 사용하듯 길찾기
+- 대중교통 노선 보기
+
+사용법
+
+- 옵션 > SKYLENS MAPS 에서 LAUNCH SKYLENS MAPS 클릭만 하면 끝입니다.
+- 처음 지도 생성 시 30초 정도 소요됩니다.
 Route times, stops and transit connections are estimates from exported data, not live game routing. The map is available while the game and mod are running. For limitations, logs and issue reporting, see RELEASE_NOTES.md in the mod package.
   </LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
   <ModVersion Value="0.1.1" />
+  <ChangeLog>
+Fixed web app discovery for Paradox Mods subscriptions. City exports now enable available Carto data selections and retain additional Carto output files in snapshots.
+  </ChangeLog>
   <GameVersion Value="1.6.*" />
   <Dependency Id="87428" />
-  <AccessLevel Value="Private" />
+  <AccessLevel Value="Public" />
 </Publish>
