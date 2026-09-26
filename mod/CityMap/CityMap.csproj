@@ -3,7 +3,7 @@
     <Configurations>Debug;Release</Configurations>
     <AssemblyName>CityMap</AssemblyName>
     <RootNamespace>CityMap</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <PublishConfigurationPath>Properties\PublishConfiguration.xml</PublishConfigurationPath>
     <CityMapGamePath Condition="'$(CityMapGamePath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II</CityMapGamePath>
     <CityMapToolPath Condition="'$(CityMapToolPath)' == ''">$(CityMapGamePath)\Cities2_Data\Content\Game\.ModdingToolchain</CityMapToolPath>

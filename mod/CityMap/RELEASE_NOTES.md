@@ -1,4 +1,6 @@
-# SKYLENS MAPS 0.1.0
+# SKYLENS MAPS 0.1.1
+
+Version 0.1.1 fixes web app discovery when SKYLENS MAPS is installed through a Paradox Mods subscription.
 
 ## 한국어
 

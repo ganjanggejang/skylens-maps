@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -63,6 +64,28 @@ namespace CityMap
             foreach (var candidate in candidates)
             {
                 if (File.Exists(Path.Combine(candidate, "index.html"))) return candidate;
+            }
+            // Unity can load subscribed code mods without a usable Assembly.Location.
+            // Paradox Mods keeps this mod's files in a versioned cache directory.
+            var modCache = Path.Combine(Application.persistentDataPath, ".cache", "Mods");
+            foreach (var cacheName in new[] { "pdx_mods", "mods_subscribed" })
+            {
+                var cacheRoot = Path.Combine(modCache, cacheName);
+                candidates.Add(Path.Combine(cacheRoot, "160718_*", "web"));
+                if (!Directory.Exists(cacheRoot)) continue;
+                try
+                {
+                    foreach (var modDirectory in Directory.GetDirectories(cacheRoot, "160718_*"))
+                    {
+                        var dll = Path.Combine(modDirectory, "CityMap.dll");
+                        var web = Path.Combine(modDirectory, "web");
+                        if (!File.Exists(dll) || !File.Exists(Path.Combine(web, "index.html"))) continue;
+                        if (!AssemblyName.GetAssemblyName(dll).Version.Equals(assembly.GetName().Version)) continue;
+                        return web;
+                    }
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
             }
             throw new FileNotFoundException("City Map web app was not found. Checked: " + string.Join("; ", candidates));
         }
