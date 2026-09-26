@@ -1,12 +1,14 @@
 # SKYLENS MAPS
 
-SKYLENS MAPS is a Cities: Skylines II mod that exports the current city with [Carto](https://mods.paradoxplaza.com/mods/87428/Windows) and opens an interactive map in your default browser. Search buildings, roads, points of interest, and transit routes; inspect water and transit layers; and get estimated driving and transit directions. The map uses your local export. Players need no external basemap, API key, or Node.js installation.
+SKYLENS MAPS opens your city map with ONE CLICK.
+
+Add to Paradox Mods Playlists: https://mods.paradoxplaza.com/mods/160718/Windows 
 
 ## Install and use
 
 1. On Cities: Skylines II 1.6.x, add [Carto](https://mods.paradoxplaza.com/mods/87428/Windows) and [SKYLENS MAPS](https://mods.paradoxplaza.com/mods/160718/Windows) to the same playset and enable both.
 2. Load a city. Open **Options → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**.
-3. Wait for Carto to export the city and for the browser to open. **Reopen map** opens the latest map for the loaded city without another export.
+3. Wait for Carto to export the city and for the browser to open automatically. **Reopen map** opens the latest map for the loaded city without another export.
 
 The local map server runs only while the game and mod are running. Existing browser tabs stop loading map data after the game closes. Each export creates a snapshot under the game's `ModsData/CityMap/snapshots/` directory. The mod download does not include Carto or your city data.
 
