@@ -1,4 +1,4 @@
-# City Map mod: stages 1–4
+# SKYLENS MAPS mod
 
 The project uses the official Cities: Skylines II `IMod`, `ModSetting`, and
 Modding Toolchain. In a loaded city, open **Options > SKYLENS MAPS > Main > LAUNCH
@@ -103,6 +103,28 @@ Snapshots served in the current session are never pruned.
 
 The official Toolchain build includes the browser app bundle under `web/`.
 The Options controls and status were verified in-game on 2026-09-25.
+
+## Release package (stage 5)
+
+`python scripts/package-release.py` regenerates runtime license notices,
+builds with the official Toolchain in Release configuration, audits the staged
+mod directory, and creates a ZIP plus SHA-256 in `artifacts/release/`. The ZIP
+contains the mod DLL and native game UI binaries, the prebuilt browser app,
+bilingual release notes, and license notices. The publisher reads the thumbnail
+from `Properties/Thumbnail.png` in the source project. The
+audit rejects Carto DLLs, source files, city data, and development directories.
+`PublishConfiguration.xml` declares Carto's Paradox Mods ID 87428 as a
+dependency, supports game 1.6.*, and remains Private. The source and original
+artwork are All rights reserved; bundled web dependency licenses are included.
+
+On 2026-09-26 the release ZIP was extracted separately and passed the local
+HTTP route check. Its 15 files were installed into the game's `Mods/CityMap`
+folder after backing up the previous development installation; SHA-256 hashes
+of all installed files matched the Release stage. The game log recorded a new
+snapshot from that installation with all seven GeoJSON files, four GeoTIFFs,
+and a water mask. The user confirmed that the map opened in the browser and
+search, water, transit, and directions worked. This machine has development
+tools installed, so a machine without those tools has not been tested directly.
 
 Stage 3 passed the official Toolchain build and HTTP route checks. On
 2026-09-25, the installed mod also completed an in-game export and opened the

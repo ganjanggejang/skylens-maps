@@ -38,5 +38,20 @@
     </ItemGroup>
     <Error Condition="!Exists('$(MSBuildProjectDirectory)\..\..\dist\index.html')" Text="City Map web build is missing." />
     <Copy SourceFiles="@(CityMapWebFiles)" DestinationFiles="@(CityMapWebFiles->'$(OutDir)\web\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\RELEASE_NOTES.md;$(MSBuildProjectDirectory)\..\..\LICENSE.txt;$(MSBuildProjectDirectory)\Properties\THIRD_PARTY_NOTICES.txt"
+          DestinationFolder="$(OutDir)" />
+  </Target>
+
+  <!-- Keep the official postprocess/deploy order; scope runtime fallback to
+       each tool's cmd.exe process rather than the whole Visual Studio process. -->
+  <Target Name="ConfigureCityMapPostProcessorRuntime" AfterTargets="ModPostProcessorConfig">
+    <PropertyGroup>
+      <ModPostProcessorArgs>set "DOTNET_ROLL_FORWARD=Major" &amp; $(ModPostProcessorArgs)</ModPostProcessorArgs>
+    </PropertyGroup>
+  </Target>
+  <Target Name="ConfigureCityMapPublisherRuntime" AfterTargets="ModPublisherConfig">
+    <PropertyGroup>
+      <ModPublisherArgs>set "DOTNET_ROLL_FORWARD=Major" &amp; $(ModPublisherArgs)</ModPublisherArgs>
+    </PropertyGroup>
   </Target>
 </Project>

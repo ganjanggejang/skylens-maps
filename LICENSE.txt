@@ -1,0 +1,5 @@
+Copyright (c) 2026 SKYLENS MAPS. All rights reserved.
+
+No permission is granted to copy, modify, or redistribute the original SKYLENS MAPS source code or artwork without prior authorization from the rights holder.
+
+Third-party software retains its own license terms. See mod/CityMap/Properties/THIRD_PARTY_NOTICES.txt for the web app's runtime dependencies. Carto is a separate mod and is not included in SKYLENS MAPS.

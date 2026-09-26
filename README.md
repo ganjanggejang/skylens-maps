@@ -1,8 +1,14 @@
 ﻿# Skylens Maps
 
-Cities: Skylines II의 Carto GeoJSON을 `localhost:3000`에서 보는 지도입니다. 차량과 대중교통 예상 경로를 표시합니다. React, TypeScript, Vite, MapLibre GL JS를 사용합니다. 외부 배경지도나 API 키는 필요하지 않습니다.
+Cities: Skylines II의 현재 도시를 Carto로 추출해 기본 브라우저에 표시하는 모드입니다. 건물·도로·POI·노선 검색, 수역·대중교통 표시, 차량·대중교통 예상 경로를 제공합니다. 외부 배경지도나 API 키는 필요하지 않습니다.
 
-## 실행
+## 모드 설치와 사용
+
+게임 1.6 계열에서 [Carto](https://mods.paradoxplaza.com/mods/87428/Windows)와 SKYLENS MAPS를 설치하고 같은 플레이셋에서 활성화합니다. 도시를 불러온 뒤 **옵션 → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**를 누르면 기본 브라우저로 지도가 열립니다. 일반 사용자는 Node.js를 설치할 필요가 없습니다. `Reopen map`은 현재 도시의 마지막 지도를 다시 엽니다. 게임 종료 후에는 로컬 지도 서버도 종료됩니다.
+
+출시용 비공개 패키지는 `python scripts/package-release.py`로 만듭니다. 개발 환경의 공식 모딩 툴체인으로 Release 빌드를 수행하고 `artifacts/release/SkylensMaps-<version>.zip`과 SHA-256 파일을 생성합니다. ZIP의 `CityMap/` 폴더에는 Carto나 도시 데이터가 들어 있지 않습니다. 설치 안내, 알려진 제한, 로그 위치는 [RELEASE_NOTES.md](mod/CityMap/RELEASE_NOTES.md)에 적었습니다. 소스와 원본 그림은 [All rights reserved](LICENSE.txt)입니다.
+
+## 개발 서버 실행
 
 Node.js 20.19 이상과 `exported_files/GeoJSON/Building_Boundary.json`, `Network_Centerline.json`이 필요합니다. `Area_Boundary.json`, `POI_Location.json`, `Route_Centerline.json`, `exported_files/GeoTIFF/Depth.tif`는 선택 파일입니다.
 

@@ -8,3 +8,5 @@
 /mod/**/bin
 /mod/**/obj
 /mod/**/Library
+**/.vs/
+*.user
