@@ -9,9 +9,11 @@ Include the steps to reproduce, the expected and actual result, your Cities: Sky
 ## Submit a change
 
 1. Keep the pull request focused and explain the user-visible behavior and any changes to Carto data handling.
-2. For web changes, use Node.js 20.19 or newer, run `npm ci`, then `npm run typecheck` and `npm run test`. `npm run build` also requires a local Carto export in `exported_files/` and prepares ignored `public/data/`.
-3. For mod changes, build with the installed game and official Modding Toolchain. If packaging changes, run `python scripts/package-release.py` and review its audit and output. Describe any in-game verification you performed.
+2. For web changes, use Node.js 20.19 or newer, run `npm ci`, then `npm run lint`, `npm run typecheck`, and `npm run test`. `npm run build` also requires a local Carto export in `exported_files/` and prepares ignored `public/data/`.
+3. For mod changes, run `./scripts/lint-mod.ps1` in PowerShell. It checks formatting with `dotnet format` and compiles the C# code with Roslyn analyzer warnings treated as errors. It requires the installed game assemblies. Then build with the installed game and official Modding Toolchain. If packaging changes, run `python scripts/package-release.py` and review its audit and output. Describe any in-game verification you performed.
 4. Do not commit exported city data, generated snapshots, `public/data/`, `dist/`, or `artifacts/`. Update the README and the relevant document under `docs/` when behavior or release steps change.
+
+Pull requests automatically run web ESLint and C# whitespace formatting on GitHub-hosted runners. The full `./scripts/lint-mod.ps1` check also runs Roslyn analyzers and requires the locally installed game assemblies, so run it before submitting a mod change.
 
 ## License and rights
 
