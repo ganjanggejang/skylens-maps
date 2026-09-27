@@ -2,6 +2,10 @@
 
 SKYLENS MAPS opens your city map with ONE CLICK.
 
+> Reached #5 in Most Popular Mods (24h) on Paradox Mods for Cities: Skylines II - September 27, 2026.
+
+<img width="480" height="350" alt="rank5" src="https://github.com/user-attachments/assets/f14dfd0b-f5c3-40ba-afe1-ee363192e373" />
+
 Add to Paradox Mods Playlists: https://mods.paradoxplaza.com/mods/160718/Windows 
 
 ## Install and use
