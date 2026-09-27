@@ -104,7 +104,8 @@ namespace CityMap.Hosting
                 {
                     var id = Volatile.Read(ref _snapshotId);
                     if (id == null) { Reject(response, 503); return; }
-                    Send(response, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new {
+                    Send(response, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
+                    {
                         snapshotId = id,
                         dataRoot = "snapshots/" + id + "/"
                     })), "application/json; charset=utf-8");

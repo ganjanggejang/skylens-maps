@@ -22,7 +22,10 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
   const { t, language, number } = useI18n()
   const [originQuery, setOriginQuery] = useState(origin?.label ?? '')
   const [destinationQuery, setDestinationQuery] = useState(destination?.label ?? '')
+  // Keep editable input text in sync when a place or the display language changes.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (origin) setOriginQuery(searchEntryLabel(origin.entry, language)) }, [origin, language])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (destination) setDestinationQuery(searchEntryLabel(destination.entry, language)) }, [destination, language])
   const places = entries.filter(entry => entry.selection.kind !== 'route')
   function select(entry: SearchEntry, side: 'origin' | 'destination') {

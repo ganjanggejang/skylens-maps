@@ -1,7 +1,7 @@
 ---
-name: build-and-test
+name: build-and-test-mod
 description: >
-  Build and verify the project after implementation changes.
+  Build and verify the project after implementation changes at `/mod`.
   Use after completing code changes, or when asked to build,
   test, verify, validate, or check whether the project works.
 ---

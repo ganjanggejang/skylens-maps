@@ -1,7 +1,7 @@
 import type { FeatureCollection, LineString } from 'geojson'
 import { hasNetworkObject } from '../network-objects'
 import { ROUTING_CONFIG } from './config'
-import { distanceMeters, lineCumulativeDistances, sliceLine,
+import { lineCumulativeDistances, sliceLine,
   type Coordinate, type LinePosition } from './geometry'
 import { SegmentIndex } from './spatial'
 import type { PassengerStop } from './transit'
