@@ -3,23 +3,30 @@
   <DisplayName Value="SKYLENS MAPS" />
   <ShortDescription Value="Export the current city with Carto and explore it in your browser." />
   <LongDescription>
-SKYLENS MAPS opens your city map with **ONE CLICK**. 
+SKYLENS MAPS opens your city map with **ONE CLICK**.
 
-###  Features 
+### Features
+
 - Search all buildings, roads, stations and routes in your city
 - Search driving and transit routes, just like using Google Maps in the real world
 - View transit layers
 
 ### How to Use
 
-- choose Options > SKYLENS MAPS  and click LAUNCH SKYLENS MAPS. Done.
+- choose Options > SKYLENS MAPS and click LAUNCH SKYLENS MAPS. Done.
 - The initial map generation may take about 30 seconds
 
 ### Required Mods
-- Carto must be installed
 
+*   Carto must be installed
 
-###  Korean Description
+### Open Source Contributions
+
+- If you have any ideas for new features or performance improvements, feel free to leave issues or PRs at [github repo](https://github.com/ganjanggejang/skylens-maps)
+- Please report errors/bugs at [issues](https://github.com/ganjanggejang/skylens-maps/issues) . Thank you
+
+### Korean Description
+
 단 한 번의 클릭으로 지도를 사용해보세요
 
 기능
@@ -32,9 +39,8 @@ SKYLENS MAPS opens your city map with **ONE CLICK**.
 
 - 옵션 > SKYLENS MAPS 에서 LAUNCH SKYLENS MAPS 클릭만 하면 끝입니다.
 - 처음 지도 생성 시 30초 정도 소요됩니다.
-Route times, stops and transit connections are estimates from exported data, not live game routing. The map is available while the game and mod are running. For limitations, logs and issue reporting, see RELEASE_NOTES.md in the mod package.
 
-The original SKYLENS MAPS code and artwork are licensed under GPL-3.0-only. Corresponding source for 0.1.3 is included as SOURCE.zip in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
+The original SKYLENS MAPS code and artwork are licensed under GPL-3.0-only.
   </LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
