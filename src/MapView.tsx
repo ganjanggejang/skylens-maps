@@ -770,6 +770,8 @@ export function MapView() {
       transitDataRef.current = {}
       transitPendingRef.current = null
     }
+  // The map and its event handlers are installed once for this view's lifetime.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

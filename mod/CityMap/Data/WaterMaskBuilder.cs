@@ -90,10 +90,16 @@ namespace CityMap.Data
                 SavePng(destination, width, height, rgba);
                 return new Dictionary<string, object>
                 {
-                    ["file"] = "water-mask.png", ["source"] = "Depth.tif",
-                    ["sourceSha256"] = SnapshotBuilder.HashFile(source), ["epsg"] = epsg,
-                    ["noData"] = noData, ["width"] = width, ["height"] = height,
-                    ["waterPixels"] = waterPixels, ["coordinates"] = coordinates, ["bounds"] = bounds
+                    ["file"] = "water-mask.png",
+                    ["source"] = "Depth.tif",
+                    ["sourceSha256"] = SnapshotBuilder.HashFile(source),
+                    ["epsg"] = epsg,
+                    ["noData"] = noData,
+                    ["width"] = width,
+                    ["height"] = height,
+                    ["waterPixels"] = waterPixels,
+                    ["coordinates"] = coordinates,
+                    ["bounds"] = bounds
                 };
             }
         }
@@ -181,8 +187,12 @@ namespace CityMap.Data
                 for (var i = 0; i < count; i++)
                 {
                     var p = i * 12;
-                    _tags[U16(entries, p)] = new Tag { Type = U16(entries, p + 2),
-                        Count = U32(entries, p + 4), Inline = entries.Skip(p + 8).Take(4).ToArray() };
+                    _tags[U16(entries, p)] = new Tag
+                    {
+                        Type = U16(entries, p + 2),
+                        Count = U32(entries, p + 4),
+                        Inline = entries.Skip(p + 8).Take(4).ToArray()
+                    };
                 }
             }
             internal byte[] ReadAt(long offset, int count)

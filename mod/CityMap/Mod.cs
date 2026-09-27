@@ -1,12 +1,3 @@
-using Colossal.Logging;
-using Game;
-using Game.Modding;
-using Game.SceneFlow;
-using UnityEngine;
-using CityMap.Export;
-using CityMap.Data;
-using CityMap.Hosting;
-using CityMap.UI;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,6 +5,15 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using CityMap.Data;
+using CityMap.Export;
+using CityMap.Hosting;
+using CityMap.UI;
+using Colossal.Logging;
+using Game;
+using Game.Modding;
+using Game.SceneFlow;
+using UnityEngine;
 
 namespace CityMap
 {

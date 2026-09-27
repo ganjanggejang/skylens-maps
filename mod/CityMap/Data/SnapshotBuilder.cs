@@ -83,9 +83,13 @@ namespace CityMap.Data
             if (!Directory.Exists(stylesDirectory))
                 throw new DirectoryNotFoundException("Carto styles are missing: " + stylesDirectory);
             var styleFiles = Directory.GetFiles(stylesDirectory, "*", SearchOption.AllDirectories)
-                .Select(path => new { Path = path, Relative = path.Substring(stylesDirectory.Length)
+                .Select(path => new
+                {
+                    Path = path,
+                    Relative = path.Substring(stylesDirectory.Length)
                     .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                    .Replace(Path.DirectorySeparatorChar, '/') })
+                    .Replace(Path.DirectorySeparatorChar, '/')
+                })
                 .OrderBy(item => item.Relative, StringComparer.Ordinal).ToArray();
             foreach (var style in styleFiles)
             {
