@@ -1,4 +1,5 @@
 import type { FeatureCollection, LineString } from 'geojson'
+import { hasNetworkObject } from '../network-objects'
 import { ROUTING_CONFIG } from './config'
 import { accessPoints, distanceMeters, projectPoint, type Coordinate, type RoutePlace } from './geometry'
 import { shortestPath } from './shortest-path'
@@ -19,7 +20,7 @@ export class NetworkGraph {
     const roadEndpoints = new Set<string>()
     if (mode === 'vehicle') {
       for (const feature of network.features) {
-        if (feature.properties?.Object !== 'Road' || feature.geometry?.type !== 'LineString') continue
+        if (!hasNetworkObject(feature.properties?.Object, 'Road') || feature.geometry?.type !== 'LineString') continue
         const line = feature.geometry.coordinates
         if (line.length < 2) continue
         roadEndpoints.add(this.pointKey(line[0] as Coordinate))
@@ -28,8 +29,8 @@ export class NetworkGraph {
     }
     for (const [featureId, feature] of network.features.entries()) {
       const properties = feature.properties ?? {}
-      const road = properties.Object === 'Road'
-      if (mode === 'vehicle' ? !road : !(properties.Object === 'Pathway' ||
+      const road = hasNetworkObject(properties.Object, 'Road')
+      if (mode === 'vehicle' ? !road : !(hasNetworkObject(properties.Object, 'Pathway') ||
         road && properties.Category !== 'Highway')) continue
       const direction = properties.Direction
       if (direction !== 'Both' && direction !== 'Forward' && direction !== 'Backward') {

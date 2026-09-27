@@ -10,6 +10,15 @@ function network(...features: Array<{ line: number[][]; object?: string; categor
 }
 
 describe('NetworkGraph', () => {
+  it('routes across Carto roads with bicycle and tram Object labels', () => {
+    const data = network(
+      { line: [[0, 0], [0.001, 0]], object: 'Road, Track', category: 'Small, Tram' },
+      { line: [[0.001, 0], [0.002, 0]], object: 'Pathway, Road, Track', category: 'Small, Bicycle, Tram' },
+    )
+    const graph = new NetworkGraph('vehicle', data)
+    expect(graph.route([0.0002, 0], [0.0018, 0]).route?.featureIds).toEqual([0, 1])
+  })
+
   it('respects Forward and Backward on a selected road segment', () => {
     const forward = new NetworkGraph('vehicle', network({ line: [[0, 0], [0.001, 0]], direction: 'Forward' }))
     expect(forward.route([0.0002, 0], [0.0008, 0]).route?.distance).toBeGreaterThan(60)

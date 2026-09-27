@@ -16,6 +16,7 @@ import type { RouteOutcome, TransitOutcome } from './routing/types'
 import { placeCoordinate } from './routing/geometry'
 import { addDirectionsLayers, showDirections } from './directions-layers'
 import { ROUTING_CONFIG } from './routing/config'
+import { hasNetworkObject, prepareNetworkObjects } from './network-objects'
 import './snapshot.css'
 
 type BuildingData = FeatureCollection<Polygon>
@@ -588,7 +589,7 @@ export function MapView() {
           loadExtraInfo(),
         ])
         if (cancelled || !containerRef.current) return
-        const networkObjects = countObjects(network)
+        const networkObjects = prepareNetworkObjects(network)
         if (!networkObjects.Road) throw new Error('Network_Centerline.json에 도로가 없습니다')
         const city = getBounds([buildings])
         const all = getBounds([buildings, network])
@@ -645,7 +646,7 @@ export function MapView() {
         for (const [index, feature] of network.features.entries()) {
           const id = `${datasetId}:network:${index}`
           feature.id = index
-          if (feature.properties?.Object === 'Road') {
+          if (hasNetworkObject(feature.properties?.Object, 'Road')) {
             const selected: Selection = { id, sourceFeatureId: index, kind: 'road', properties: { ...feature.properties } }
             lookup.set(`network:${index}`, selected)
             entries.push({ selection: selected, geometry: feature.geometry })

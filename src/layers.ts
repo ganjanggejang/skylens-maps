@@ -29,7 +29,9 @@ export const INITIAL_VISIBILITY = Object.fromEntries(
   GROUP_ORDER.map(id => [id, GROUPS[id].defaultVisible]),
 ) as Visibility
 
-const objectFilter = (object: string): ['==', ['get', string], string] => ['==', ['get', 'Object'], object]
+const objectFilter = (object: string): FilterSpecification =>
+  ['in', object, ['get', '_objectTypes']]
+const areaObjectFilter = (object: string): FilterSpecification => ['==', ['get', 'Object'], object]
 
 export function addWaterLayer(map: MapLibreMap, coordinates: [[number, number], [number, number], [number, number], [number, number]], image: HTMLImageElement) {
   map.addSource('water', { type: 'image', coordinates })
@@ -98,12 +100,12 @@ export function addBaseLayers(map: MapLibreMap) {
 export function addDistrictLayers(map: MapLibreMap, objects: Record<string, number>) {
   if (objects.District) {
     map.addLayer({
-      id: 'district-fill', type: 'fill', source: 'area', filter: objectFilter('District'),
+      id: 'district-fill', type: 'fill', source: 'area', filter: areaObjectFilter('District'),
       layout: { visibility: 'none' },
       paint: { 'fill-color': '#81b79a', 'fill-opacity': 0.22 },
     }, 'building-fill')
     map.addLayer({
-      id: 'district-outline', type: 'line', source: 'area', filter: objectFilter('District'),
+      id: 'district-outline', type: 'line', source: 'area', filter: areaObjectFilter('District'),
       layout: { visibility: 'none' },
       paint: { 'line-color': '#4e8468', 'line-width': 1.5 },
     }, 'building-fill')

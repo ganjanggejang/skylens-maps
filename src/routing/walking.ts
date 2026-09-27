@@ -1,4 +1,5 @@
 import type { FeatureCollection, LineString } from 'geojson'
+import { hasNetworkObject } from '../network-objects'
 import { ROUTING_CONFIG } from './config'
 import { distanceMeters, lineCumulativeDistances, sliceLine,
   type Coordinate, type LinePosition } from './geometry'
@@ -112,8 +113,8 @@ export class WalkingGraph {
   }
 
   private walkable(properties: Record<string, unknown>) {
-    return properties.Object === 'Pathway' ||
-      properties.Object === 'Road' && properties.Category !== 'Highway'
+    return hasNetworkObject(properties.Object, 'Pathway') ||
+      hasNetworkObject(properties.Object, 'Road') && properties.Category !== 'Highway'
   }
   private key(point: Coordinate) { return `${point[0]},${point[1]}` }
   private node() { const id = this.adjacency.length; this.adjacency.push([]); return id }
