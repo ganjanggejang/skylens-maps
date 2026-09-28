@@ -222,6 +222,7 @@ export function MapView() {
   const [visibility, setVisibility] = useState<Visibility>({ ...INITIAL_VISIBILITY })
   const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS)
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [returnBuildingId, setReturnBuildingId] = useState<string | null>(null)
   const [searchEntries, setSearchEntries] = useState<SearchEntry[]>([])
   const [directionsOpen, setDirectionsOpen] = useState(false)
   const [directionsOrigin, setDirectionsOrigin] = useState<DirectionPlace | null>(null)
@@ -368,6 +369,7 @@ export function MapView() {
   }
 
   function selectFeature(next: Selection | null, geometry?: Geometry) {
+    setReturnBuildingId(null)
     selectionRef.current = next
     setSelection(next)
     const map = mapRef.current
@@ -392,6 +394,7 @@ export function MapView() {
   }
 
   function openDirections() {
+    setReturnBuildingId(null)
     directionsOpenRef.current = true
     setDirectionsOpen(true)
     setSidebarCollapsed(false)
@@ -494,6 +497,19 @@ export function MapView() {
     } else {
       fit(map, geometryBounds(entry.geometry.coordinates))
     }
+  }
+
+  function selectBuildingRoute(entry: SearchEntry) {
+    const building = selectionRef.current
+    if (building?.kind !== 'building') return
+    selectSearchEntry(entry)
+    setReturnBuildingId(building.id)
+  }
+
+  function returnToBuilding() {
+    const building = searchEntriesRef.current.find(entry => entry.selection.id === returnBuildingId)
+    if (building?.selection.kind === 'building') selectSearchEntry(building)
+    else setReturnBuildingId(null)
   }
 
   function focusRouteStop(entry: SearchEntry) {
@@ -810,7 +826,9 @@ export function MapView() {
         onToggleCollapsed={() => setSidebarCollapsed(previous => !previous)}
         onClearSelection={() => selectFeature(null)} searchEntries={searchEntries} searchStates={searchStates}
         onSearchActivate={loadSearchSources} onSearchSelect={selectSearchEntry} onStopFocus={focusRouteStop}
-        onBuildingRouteSelect={selectSearchEntry} directionsOpen={directionsOpen}
+        onBuildingRouteSelect={selectBuildingRoute}
+        onBackToBuilding={selection?.kind === 'route' && returnBuildingId ? returnToBuilding : null}
+        directionsOpen={directionsOpen}
         directionsOrigin={directionsOrigin} directionsDestination={directionsDestination}
         directionsOutcome={directionsOutcome} directionsCalculating={directionsCalculating}
         transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}

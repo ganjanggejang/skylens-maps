@@ -6,6 +6,8 @@
 .map-layer-menu{position:absolute;right:0;bottom:calc(100% + 10px);width:min(292px,calc(100vw - 24px));max-height:calc(100vh - 115px);overflow-y:auto;padding:16px;background:#fffdf9;border:1px solid #d9dfd7;border-radius:9px;box-shadow:0 6px 24px #34433a30}
 .map-layer-menu h2{margin:0 0 10px;font-size:14px;color:#314d3b}
 .transport-note{margin:0 0 9px!important;font-size:11px!important;line-height:1.45;color:#748078!important}
+.detail .detail-back{display:block;margin:-7px 0 8px;padding:5px 0;border:0;background:transparent;color:#285f48;font-size:12px;text-align:left}
+.detail .detail-back:hover{background:transparent;text-decoration:underline}
 .detail .route-stops{margin-top:20px;padding-top:16px;border-top:1px solid #edf0ea}
 .detail .route-stops h3{margin:0 0 9px;font-size:13px}
 .detail .route-stops ol{margin:0;padding-left:23px}
