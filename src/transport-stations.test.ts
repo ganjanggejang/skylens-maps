@@ -28,7 +28,18 @@ describe('transportStations', () => {
     expect(stations[0].geometry.coordinates).toEqual([0.0001, 0])
     expect(stations[0].properties?._representativeSourceId).toBe(2)
     expect(stations[0].properties?._stopIds).toEqual([0, 3])
+    expect(stations[0].properties?._mapLabel).toBe('Central')
     expect(stations[1].properties?._stopIds).toEqual([1])
+  })
+
+  it('uses the stop name when a subway facility has an unrelated asset name', () => {
+    const stations = transportStations(collection(
+      poi('Market Square', 'StopSubway', 10, 0),
+      poi('Asset company', 'BuildingSubway', 10, 0.0001),
+      poi('Market Square', 'StopSubway', 10, 0.0002),
+    ), 'subway').features
+    expect(stations[0].properties?._mapLabel).toBe('Market Square')
+    expect(stations[0].properties?.Name).toBe('Asset company')
   })
 
   it.each(['bus', 'tram'] as const)('groups nearby %s stops by name across addresses', mode => {
