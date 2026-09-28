@@ -1,7 +1,7 @@
 import type { Position } from 'geojson'
 import type { SearchEntry } from './Search'
 import { normalizeText, propertyText } from './building-name'
-import { distanceToRouteMeters, nearbyStops } from './route-stops'
+import { nearbyStops } from './route-stops'
 import { poiModes, routeMode, type TransportMode } from './transport'
 
 const FACILITY_DISTANCE_METERS = 25
@@ -30,10 +30,15 @@ function distanceToBuilding(point: Position, rings: Position[][]): number {
   return inside ? 0 : nearest
 }
 
-function sameNameAndAddress(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
-  const fields = ['Name', 'Address_District', 'Address_Street', 'Address_Number']
+function sameAddress(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const fields = ['Address_District', 'Address_Street', 'Address_Number']
   return fields.every(key => propertyText(a, key) &&
     normalizeText(propertyText(a, key)) === normalizeText(propertyText(b, key)))
+}
+
+function sameNameAndAddress(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  return sameAddress(a, b) && !!propertyText(a, 'Name') &&
+    normalizeText(propertyText(a, 'Name')) === normalizeText(propertyText(b, 'Name'))
 }
 
 function isStop(entry: SearchEntry): boolean {
@@ -47,18 +52,31 @@ export function linkedBuildingRoutes(building: SearchEntry, entries: SearchEntry
       propertyText(building.selection.properties, 'Category') !== 'Public, Transportation') return []
   const rings = building.geometry.coordinates
   const modes = new Set<TransportMode>()
+  const facilities: SearchEntry[] = []
   for (const entry of entries) {
     if (entry.selection.kind !== 'poi' || entry.geometry.type !== 'Point' || isStop(entry)) continue
     const category = propertyText(entry.selection.properties, 'Category')
     if (!category.split(',').some(token => /^(Building|Depot)/.test(token.trim()))) continue
     if (!sameNameAndAddress(building.selection.properties, entry.selection.properties) &&
         distanceToBuilding(entry.geometry.coordinates, rings) > FACILITY_DISTANCE_METERS) continue
+    facilities.push(entry)
     for (const mode of poiModes(category)) modes.add(mode)
   }
+  for (const entry of entries) {
+    if (isStop(entry) && sameNameAndAddress(building.selection.properties, entry.selection.properties)) {
+      for (const mode of poiModes(entry.selection.properties.Category)) modes.add(mode)
+    }
+  }
   if (!modes.size) return []
-  const buildingStops = entries.filter(entry => entry.geometry.type === 'Point' && isStop(entry) &&
-    poiModes(entry.selection.properties.Category).some(mode => modes.has(mode)) &&
-    distanceToBuilding(entry.geometry.coordinates, rings) <= STOP_DISTANCE_METERS)
+  const buildingStops = entries.filter(entry => {
+    if (entry.geometry.type !== 'Point' || !isStop(entry)) return false
+    const stopModes = poiModes(entry.selection.properties.Category)
+    if (!stopModes.some(mode => modes.has(mode))) return false
+    if (sameNameAndAddress(building.selection.properties, entry.selection.properties) ||
+        distanceToBuilding(entry.geometry.coordinates, rings) <= STOP_DISTANCE_METERS) return true
+    return facilities.some(facility => sameAddress(facility.selection.properties, entry.selection.properties) &&
+      poiModes(facility.selection.properties.Category).some(mode => stopModes.includes(mode)))
+  })
   const stopIds = new Set(buildingStops.map(entry => entry.selection.id))
   if (!stopIds.size) return []
   const routes: SearchEntry[] = []
@@ -66,9 +84,6 @@ export function linkedBuildingRoutes(building: SearchEntry, entries: SearchEntry
     if (entry.selection.kind !== 'route' || entry.geometry.type !== 'LineString') continue
     const mode = routeMode(entry.selection.properties.Transport)
     if (!mode || !modes.has(mode)) continue
-    const line = entry.geometry.coordinates
-    if (!buildingStops.some(stop => stop.geometry.type === 'Point' &&
-        distanceToRouteMeters(stop.geometry.coordinates, line) <= 50)) continue
     if (nearbyStops(entry, entries).some(stop => stopIds.has(stop.selection.id))) routes.push(entry)
   }
   return routes
