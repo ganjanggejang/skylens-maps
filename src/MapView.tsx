@@ -6,7 +6,7 @@ import { addBaseLayers, addBuildingPlaceLayer, addDistrictLayers, addStationLaye
 import { buildingPlaces, withoutSubwayBuildingDuplicates, type BuildingPlaces } from './place-labels'
 import { poiModes, routeMode, TRANSPORT_MODES, type TransportMode } from './transport'
 import { nearbyStops } from './route-stops'
-import { linkedBuildingRoutes } from './building-routes'
+import { linkedBuildingRoutes, matchingStationBuilding } from './building-routes'
 import { depotCategory, hasCategory, STATION_MODES, transportStations } from './transport-stations'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
@@ -456,7 +456,10 @@ export function MapView() {
             for (const station of stations.features) {
               const sourceId = station.properties?._representativeSourceId
               if (typeof sourceId === 'number') {
-                featureLookupRef.current.set(`${mode}-stations:${station.id}`, additions[sourceId].selection)
+                const building = mode === 'subway' ?
+                  matchingStationBuilding(station, searchEntriesRef.current) : undefined
+                featureLookupRef.current.set(`${mode}-stations:${station.id}`,
+                  building?.selection ?? additions[sourceId].selection)
               }
             }
           }

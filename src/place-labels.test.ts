@@ -58,6 +58,19 @@ describe('buildingPlaces', () => {
     expect(places.features.map(feature => feature.properties.label)).toEqual(['City Hall'])
   })
 
+  it('shows education buildings with fewer than 100 employees at a closer zoom', () => {
+    const small = building('Small school', 'Unzoned', 'small-school', 'Public, Education', 0)
+    const large = building('Large school', 'Unzoned', 'large-school', 'Public, Education', .01)
+    const unknown = building('Unknown school', 'Unzoned', 'unknown-school', 'Public, Education', .02)
+    small.properties!.Employee = 99
+    large.properties!.Employee = 100
+    delete unknown.properties!.Employee
+
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [small, large, unknown] })
+    expect(places.features.map(feature => feature.properties.tier)).toEqual([2, 1, 1])
+    expect(places.features[0].properties.sortKey).toBeGreaterThan(places.features[1].properties.sortKey)
+  })
+
   it('removes a subway building duplicate at the station address only', () => {
     const places = buildingPlaces({ type: 'FeatureCollection', features: [
       building('Central station', 'Unzoned', 'station', 'Public, Transportation', 0),

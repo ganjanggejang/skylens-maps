@@ -167,6 +167,10 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
       const frequency = names.get(normalizeText(name)) ?? 1
       score = base[kind] + (frequency === 1 ? 10 : frequency <= 3 ? 5 : frequency >= 10 ? -8 : 0) +
         pointScore(percentile(publicAreas, item.area), .99, .9, 25, 15)
+      const employee = properties.Employee
+      if (kind === 'Education' && typeof employee === 'number' && Number.isFinite(employee) && employee < 100) {
+        score -= 25
+      }
       if (score < 45) continue
       tier = score >= 115 ? 0 : score >= 80 ? 1 : 2
     }
