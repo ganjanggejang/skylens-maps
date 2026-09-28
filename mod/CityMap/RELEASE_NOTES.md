@@ -1,12 +1,18 @@
-# SKYLENS MAPS 0.1.3
+# SKYLENS MAPS 0.1.4
 
-Version 0.1.3 releases the original source code, documentation, and artwork under GPL-3.0-only. The package includes the complete license and corresponding source archive. Map behavior is unchanged.
+Version 0.1.4 adds transit mode icons, improves route discovery for transport facilities, reveals more place labels as you zoom in, and fixes roads with tram or bicycle lanes.
+
+### Changes in 0.1.4
+
+- Show bus, train, tram, subway, ship, and ferry icons on the map. Harbor and ferry terminal details now include nearby ship and ferry routes, with a way back after viewing a route.
+- Reveal more named buildings and subway stations as you zoom in. Improved label ranking and overlap handling prioritize distinctive buildings and transport facilities.
+- Fix road display and routing for roads with tram or bicycle lanes.
 
 ## 한국어
 
 **설치:** Cities: Skylines II 1.6 계열에서 [Carto](https://mods.paradoxplaza.com/mods/87428/Windows)와 SKYLENS MAPS를 같은 플레이셋에 추가하고 둘 다 활성화하세요. 도시를 불러온 뒤 **옵션 → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**를 누르면 현재 도시를 추출하고 기본 브라우저로 지도를 엽니다. 이후 **Reopen map**은 같은 도시의 마지막 지도를 다시 엽니다. Node.js나 별도 지도 서비스는 필요하지 않습니다.
 
-**기능:** 건물·도로·POI·노선 검색, 수역과 대중교통 레이어, 차량 및 대중교통 예상 길찾기. 원본 Carto 데이터와 생성한 지도는 사용자 데이터의 `ModsData/CityMap/snapshots/`에 저장됩니다. 지도 서버는 게임이 실행 중일 때만 열립니다.
+**기능:** 건물·도로·POI·노선 검색, 수역과 대중교통 레이어, 차량 및 대중교통 예상 길찾기. 확대하면 건물과 지하철역 이름이 더 많이 표시됩니다. 버스·기차·트램·지하철·선박·페리 아이콘을 표시하며, 항구와 페리 터미널에서 주변 노선을 확인할 수 있습니다. 원본 Carto 데이터와 생성한 지도는 사용자 데이터의 `ModsData/CityMap/snapshots/`에 저장됩니다. 지도 서버는 게임이 실행 중일 때만 열립니다.
 
 **알려진 제한:** 모든 Carto 데이터 선택 항목을 활성화하므로 대도시는 추출 중 게임 화면이 잠시 멈추고 스냅샷 크기가 커질 수 있습니다. 수역 마스크 생성이 실패하면 수역 레이어를 사용할 수 없습니다. 대중교통 정류장 연결·순서, 운행 방향·대기 시간과 차량 주행 시간은 추정치이며 실제 게임 경로 또는 시간표와 다를 수 있습니다. 지도 방향과 거리의 게임 화면 대비 정확도는 아직 검증 중입니다. 게임이나 모드가 종료되면 기존 브라우저 탭의 지도는 열리지 않습니다.
 
@@ -16,7 +22,7 @@ Version 0.1.3 releases the original source code, documentation, and artwork unde
 
 **Install:** On Cities: Skylines II 1.6.x, add [Carto](https://mods.paradoxplaza.com/mods/87428/Windows) and SKYLENS MAPS to the same playset and enable both. Load a city and choose **Options → SKYLENS MAPS → Main → LAUNCH SKYLENS MAPS**. The mod exports the current city and opens the map in your default browser. **Reopen map** opens the latest map for the loaded city. No Node.js or external map service is needed.
 
-**Features:** Search buildings, roads, POIs and routes; show water and transit layers; estimate driving and transit directions. Exported data and maps are stored under `ModsData/CityMap/snapshots/` in the game's user data. The local map server runs only while the game is running.
+**Features:** Search buildings, roads, POIs and routes; show water and transit layers; estimate driving and transit directions. Zoom in to see more building and subway station labels. Transit mode icons distinguish bus, train, tram, subway, ship, and ferry services; harbor and ferry terminal details show nearby routes. Exported data and maps are stored under `ModsData/CityMap/snapshots/` in the game's user data. The local map server runs only while the game is running.
 
 **Known limitations:** The export enables every Carto data selection, so a large city may briefly pause the game and produce a large snapshot. Water cannot be shown if mask generation fails. Transit stop links and order, direction and wait times, and driving times are estimates. Map orientation and distance accuracy against the game view have not yet been validated. Browser tabs stop loading the map after the game or mod closes.
 
@@ -24,4 +30,4 @@ Version 0.1.3 releases the original source code, documentation, and artwork unde
 
 ## Credits and licenses
 
-Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.3 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
+Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.4 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps

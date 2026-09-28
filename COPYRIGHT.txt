@@ -3,7 +3,7 @@ Copyright (C) 2026 SKYLENS MAPS.
 Unless otherwise noted, the original SKYLENS MAPS source code, documentation,
 and artwork in this repository are licensed under the GNU General Public
 License, version 3 only (GPL-3.0-only). See LICENSE.txt for the complete terms.
-Corresponding source for version 0.1.3 is included as SOURCE.zip in the mod
+Corresponding source for version 0.1.4 is included as SOURCE.zip in the mod
 package. The project repository is https://github.com/ganjanggejang/skylens-maps.
 
 Third-party components retain their own copyright and license terms. The

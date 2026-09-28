@@ -44,9 +44,9 @@ The original SKYLENS MAPS code and artwork are licensed under GPL-3.0-only.
   </LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
-  <ModVersion Value="0.1.3" />
+  <ModVersion Value="0.1.4" />
   <ChangeLog>
-Released SKYLENS MAPS source code, documentation, and original artwork under GPLv3. Added the complete license, copyright and source notices to the mod package. Updated the project documentation and contribution guide. Map behavior is unchanged.
+Added transit mode icons for bus, train, tram, subway, ship, and ferry. Improved transport facility route discovery, including harbor and ferry services, and added navigation back to nearby routes. Added zoom-dependent labels for named buildings and subway stations, with better label ranking and overlap handling. Fixed road and routing support for tram and bicycle lanes.
   </ChangeLog>
   <GameVersion Value="1.6.*" />
   <Dependency Id="87428" />

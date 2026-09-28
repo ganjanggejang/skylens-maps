@@ -121,6 +121,13 @@ audit rejects Carto DLLs, source files, city data, and development directories.
 dependency, supports game 1.6.*, and is Public. The source and original
 artwork are licensed under GPL-3.0-only; bundled web dependency licenses are included.
 
+On 2026-09-28, version 0.1.4 passed TypeScript type checking, all 40 automated
+tests, the official Toolchain Release build, and the 16-file package audit. The
+developer completed the manual game test and confirmed the published update.
+The official Mod Publisher reported a successful new-version upload to public
+Paradox Mods mod 160718. See [the release record](../../docs/mod_release_plan.md)
+for the package hash and verification details.
+
 On 2026-09-26 the release ZIP was extracted separately and passed the local
 HTTP route check. Its 15 files were installed into the game's `Mods/CityMap`
 folder after backing up the previous development installation; SHA-256 hashes

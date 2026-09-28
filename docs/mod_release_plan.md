@@ -12,9 +12,15 @@ This document records the completed Cities: Skylines II mod and release workflow
 
 ## Packaging and publication
 
-- [PublishConfiguration.xml](../mod/CityMap/Properties/PublishConfiguration.xml) records SKYLENS MAPS mod ID `160718`, version `0.1.3`, Cities: Skylines II `1.6.*`, public access, and Carto dependency ID `87428`. The official Toolchain project builds the browser bundle and includes it under `web/`.
-- `python scripts/package-release.py` regenerates runtime license notices, builds the C# project in Release configuration, audits the staged mod, and creates `artifacts/release/SkylensMaps-<version>.zip` plus a SHA-256 file. The package contains `SOURCE.zip` with the corresponding 0.1.3 project source; this keeps the published GPLv3 source available before repository changes are committed. The audit checks required DLLs, native UI binaries, web workers, release notes, the GPLv3 license and copyright/source notice, dependency licenses, source archive, and browser assets. It rejects loose development files, city exports, snapshots, and a bundled Carto DLL.
+- [PublishConfiguration.xml](../mod/CityMap/Properties/PublishConfiguration.xml) records SKYLENS MAPS mod ID `160718`, version `0.1.4`, Cities: Skylines II `1.6.*`, public access, and Carto dependency ID `87428`. The official Toolchain project builds the browser bundle and includes it under `web/`.
+- `python scripts/package-release.py` regenerates runtime license notices, builds the C# project in Release configuration, audits the staged mod, and creates `artifacts/release/SkylensMaps-<version>.zip` plus a SHA-256 file. The package contains `SOURCE.zip` with the corresponding 0.1.4 project source; this keeps the published GPLv3 source available before repository changes are committed. The audit checks required DLLs, native UI binaries, web workers, release notes, the GPLv3 license and copyright/source notice, dependency licenses, source archive, and browser assets. It rejects loose development files, city exports, snapshots, and a bundled Carto DLL.
 - Release ZIPs and checksums are generated under the ignored `artifacts/release/` directory. The publication settings and update profile are checked in, and the mod is distributed on Paradox Mods. Carto is installed separately by players.
+
+### Version 0.1.4 (2026-09-28)
+
+- `npm.cmd run typecheck` passed, and `npm.cmd run test` passed all 40 tests in 9 files. The official Toolchain Release build finished with 0 warnings and 0 errors. The package audit accepted 16 files.
+- `SkylensMaps-0.1.4.zip` and its stage contained the same 16 files with matching hashes. The ZIP SHA-256 is `969697de319302d10a61bd6cf7380187b24f315730c325d0ebf0b4a84af3499a`.
+- The developer reported completing the manual in-game test. The official Mod Publisher then reported that it published version `0.1.4` to public Paradox Mods mod `160718`; the developer also confirmed the release was visible. The uploaded content came from the verified Release stage.
 
 ## Recorded verification
 
