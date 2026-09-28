@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Map as MapLibreMap, NavigationControl, setWorkerUrl, type LngLatBoundsLike } from 'maplibre-gl'
+import { Map as MapLibreMap, NavigationControl, setWorkerUrl, type GeoJSONSource, type LngLatBoundsLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { FeatureCollection, Geometry, LineString, Point, Polygon } from 'geojson'
-import { addBaseLayers, addDistrictLayers, addStationLayer, addTransportLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setGroupVisibility, setTransportFocus, type GroupId, type Visibility } from './layers'
+import { addBaseLayers, addBuildingPlaceLayer, addDistrictLayers, addStationLayer, addSubwayPlaceLayers, addTransportLayers, addWaterLayer, ALWAYS_VISIBLE, GROUP_ORDER, GROUPS, INITIAL_VISIBILITY, setBuildingPlaceTier, setGroupVisibility, setTransportFocus, type GroupId, type Visibility } from './layers'
+import { buildingPlaces, withoutSubwayBuildingDuplicates, type BuildingPlaces } from './place-labels'
 import { poiModes, routeMode, TRANSPORT_MODES, type TransportMode } from './transport'
 import { nearbyStops } from './route-stops'
-import { linkedBuildingRoutes } from './building-routes'
+import { linkedBuildingRoutes, matchingStationBuilding } from './building-routes'
 import { depotCategory, hasCategory, STATION_MODES, transportStations } from './transport-stations'
 import { addSelectionLayers, showSelection, type Selection } from './interaction'
 import { Sidebar, type Counts, type SourceKey, type SourceState, type SourceStates } from './Sidebar'
@@ -203,6 +204,8 @@ export function MapView() {
   const waterPromiseRef = useRef<Promise<void> | null>(null)
   const selectionRef = useRef<Selection | null>(null)
   const featureLookupRef = useRef<Map<string, Selection>>(new Map())
+  const buildingPlacesRef = useRef<BuildingPlaces | null>(null)
+  const overviewZoomRef = useRef(12)
   const datasetIdRef = useRef('')
   const routingWorkerRef = useRef<Worker | null>(null)
   const routingRequestRef = useRef(0)
@@ -441,13 +444,22 @@ export function MapView() {
           for (const mode of STATION_MODES) {
             const stations = transportStations(pois, mode)
             addStationLayer(map, mode, stations)
+            if (mode === 'subway') {
+              addSubwayPlaceLayers(map, overviewZoomRef.current)
+              const places = buildingPlacesRef.current
+              if (places) map.getSource<GeoJSONSource>('building-places')?.setData(
+                withoutSubwayBuildingDuplicates(places, stations))
+            }
             const depot = depotCategory(mode)
             modeCounts[mode] = stations.features.length + (depot ?
               pois.features.filter(feature => hasCategory(feature, depot)).length : 0)
             for (const station of stations.features) {
               const sourceId = station.properties?._representativeSourceId
               if (typeof sourceId === 'number') {
-                featureLookupRef.current.set(`${mode}-stations:${station.id}`, additions[sourceId].selection)
+                const building = mode === 'subway' ?
+                  matchingStationBuilding(station, searchEntriesRef.current) : undefined
+                featureLookupRef.current.set(`${mode}-stations:${station.id}`,
+                  building?.selection ?? additions[sourceId].selection)
               }
             }
           }
@@ -676,6 +688,12 @@ export function MapView() {
           lookup.set(`buildings:${index}`, selected)
           entries.push({ selection: selected, geometry: feature.geometry })
         }
+        const places = buildingPlaces(buildings)
+        buildingPlacesRef.current = places
+        for (const feature of places.features) {
+          lookup.set(`building-places:${feature.id}`,
+            lookup.get(`buildings:${feature.id}`)!)
+        }
         for (const [index, feature] of network.features.entries()) {
           const id = `${datasetId}:network:${index}`
           feature.id = index
@@ -722,6 +740,7 @@ export function MapView() {
           currentMap.addSource('buildings', { type: 'geojson', data: buildings })
           currentMap.addSource('network', { type: 'geojson', data: network })
           addBaseLayers(currentMap)
+          addBuildingPlaceLayer(currentMap, places)
           for (const id of GROUP_ORDER) setGroupVisibility(currentMap, id, visibilityRef.current[id])
           addSelectionLayers(currentMap)
           addDirectionsLayers(currentMap)
@@ -729,17 +748,18 @@ export function MapView() {
             const radius = 6
             const point = event.point
             const transportPoiLayers = [...TRANSPORT_MODES.map(mode => `transport-${mode}-poi`),
-              ...STATION_MODES.map(mode => `transport-${mode}-depot`)].filter(id => currentMap.getLayer(id))
+              ...STATION_MODES.map(mode => `transport-${mode}-depot`),
+              'place-subway-label'].filter(id => currentMap.getLayer(id))
             const transportRouteLayers = TRANSPORT_MODES.map(mode => `transport-${mode}-route`).filter(id => currentMap.getLayer(id))
             const poi = transportPoiLayers.length ? currentMap.queryRenderedFeatures(event.point, { layers: transportPoiLayers })[0] : undefined
-            const poiIsFacility = typeof poi?.properties?.Category === 'string' &&
+            const poiIsFacility = !poi?.layer.id.startsWith('place-') && typeof poi?.properties?.Category === 'string' &&
               poi.properties.Category.split(',').some((token: string) => /^(Building|Depot)/.test(token.trim()))
             const route = !poi && transportRouteLayers.length ? currentMap.queryRenderedFeatures(
               [[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]],
               { layers: transportRouteLayers },
             )[0] : undefined
             const building = poi && !poiIsFacility || route ? undefined :
-              currentMap.queryRenderedFeatures(event.point, { layers: ['building-fill'] })[0]
+              currentMap.queryRenderedFeatures(event.point, { layers: ['place-building-label', 'building-fill'] })[0]
             const road = building || poi || route ? undefined : currentMap.queryRenderedFeatures(
               [[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]],
               { layers: ['road-line'] },
@@ -757,9 +777,11 @@ export function MapView() {
           })
           currentMap.on('mousemove', event => {
             const point = event.point
-            const building = currentMap.queryRenderedFeatures(point, { layers: ['building-fill'] }).length > 0
+            const building = currentMap.queryRenderedFeatures(point,
+              { layers: ['place-building-label', 'building-fill'] }).length > 0
             const transportLayers = [...TRANSPORT_MODES.flatMap(mode => [`transport-${mode}-poi`, `transport-${mode}-route`]),
-              ...STATION_MODES.map(mode => `transport-${mode}-depot`)]
+              ...STATION_MODES.map(mode => `transport-${mode}-depot`),
+              'place-subway-label']
               .filter(id => currentMap.getLayer(id))
             const transport = transportLayers.length > 0 && currentMap.queryRenderedFeatures(
               [[point.x - 6, point.y - 6], [point.x + 6, point.y + 6]], { layers: transportLayers },
@@ -771,7 +793,16 @@ export function MapView() {
             currentMap.getCanvas().style.cursor = building || transport || road ? 'pointer' : ''
           })
           constrainMap(currentMap, all)
+          overviewZoomRef.current = currentMap.cameraForBounds(city, { padding: fitPadding(), maxZoom: 15 })?.zoom ?? 12
+          let shownTier = -1
+          const updatePlaceZoom = () => {
+            const delta = currentMap.getZoom() - overviewZoomRef.current
+            const tier = delta >= 2.5 ? 2 : delta >= 1.2 ? 1 : 0
+            if (tier !== shownTier) { shownTier = tier; setBuildingPlaceTier(currentMap, tier) }
+          }
+          currentMap.on('zoom', updatePlaceZoom)
           fit(currentMap, city)
+          updatePlaceZoom()
           mapReady = true
           setStatus('ready')
           if (waterInfo.coordinates) loadWater()
@@ -797,6 +828,7 @@ export function MapView() {
       map?.remove()
       mapRef.current = null
       featureLookupRef.current.clear()
+      buildingPlacesRef.current = null
       searchEntriesRef.current = []
       datasetIdRef.current = ''
       routingWorkerRef.current?.terminate()

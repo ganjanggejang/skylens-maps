@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LineString, Point, Polygon } from 'geojson'
 import type { SearchEntry } from './Search'
-import { linkedBuildingRoutes } from './building-routes'
+import { linkedBuildingRoutes, matchingStationBuilding } from './building-routes'
 
 const address = { Address_District: 'Harbor', Address_Street: 'Quay Road', Address_Number: 10 }
 
@@ -58,5 +58,33 @@ describe('linkedBuildingRoutes', () => {
     const entries = [terminal, point(0, 'BuildingFerry', 'Harbor terminal', 0),
       point(1, 'StopFerry', 'Other quay', 0.0009, 20), unrelated]
     expect(linkedBuildingRoutes(terminal, entries)).toEqual([])
+  })
+})
+
+describe('matchingStationBuilding', () => {
+  it('selects the station building by address even when the icon lies outside it and has another name', () => {
+    const terminal = building()
+    const unrelated = entry('building', 1, terminal.geometry,
+      { Name: 'Other station', Category: 'Public, Transportation', ...address, Address_Number: 20 })
+    const station = { type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [0.002, 0] },
+      properties: { Name: 'Subway platform', Category: 'BuildingSubway', ...address } }
+
+    expect(matchingStationBuilding(station, [unrelated, terminal])).toBe(terminal)
+    expect(matchingStationBuilding({ ...station, properties: { ...station.properties, Address_Number: 30 } },
+      [unrelated, terminal])).toBeUndefined()
+  })
+
+  it('does not guess when multiple transport buildings share an address', () => {
+    const terminal = building()
+    const other = entry('building', 1, terminal.geometry,
+      { ...terminal.selection.properties, Name: 'Other station' })
+    const station = { type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [0, 0] },
+      properties: { Name: 'Subway platform', Category: 'StopSubway', ...address } }
+
+    expect(matchingStationBuilding(station, [terminal, other])).toBeUndefined()
+    expect(matchingStationBuilding({ ...station, properties: { ...station.properties, Name: 'Other station' } },
+      [terminal, other])).toBe(other)
   })
 })

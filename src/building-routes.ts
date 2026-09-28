@@ -1,4 +1,4 @@
-import type { Position } from 'geojson'
+import type { Feature, Point, Position } from 'geojson'
 import type { SearchEntry } from './Search'
 import { normalizeText, propertyText } from './building-name'
 import { nearbyStops } from './route-stops'
@@ -39,6 +39,16 @@ function sameAddress(a: Record<string, unknown>, b: Record<string, unknown>): bo
 function sameNameAndAddress(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
   return sameAddress(a, b) && !!propertyText(a, 'Name') &&
     normalizeText(propertyText(a, 'Name')) === normalizeText(propertyText(b, 'Name'))
+}
+
+export function matchingStationBuilding(station: Feature<Point>, entries: SearchEntry[]): SearchEntry | undefined {
+  const properties = station.properties ?? {}
+  const candidates = entries.filter(entry => entry.selection.kind === 'building' &&
+    propertyText(entry.selection.properties, 'Category') === 'Public, Transportation' &&
+    sameAddress(entry.selection.properties, properties))
+  if (candidates.length === 1) return candidates[0]
+  const named = candidates.filter(entry => sameNameAndAddress(entry.selection.properties, properties))
+  return named.length === 1 ? named[0] : undefined
 }
 
 function isStop(entry: SearchEntry): boolean {

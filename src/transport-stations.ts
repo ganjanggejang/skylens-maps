@@ -71,6 +71,16 @@ export function transportStations(pois: FeatureCollection<Point>, mode: StationM
   return { type: 'FeatureCollection', features: stations.map(({ members }, id) => {
     const representative = members.find(member => member.facility) ?? members[0]
     const stops = members.filter(member => !member.facility)
+    const stopNames = new Map<string, { name: string; count: number }>()
+    for (const stop of stops) {
+      if (!stop.name) continue
+      const previous = stopNames.get(stop.name)
+      stopNames.set(stop.name, { name: propertyText(stop.feature.properties ?? {}, 'Name'),
+        count: (previous?.count ?? 0) + 1 })
+    }
+    const mapLabel = [...stopNames.values()].sort((a, b) =>
+      b.count - a.count || a.name.length - b.name.length)[0]?.name ||
+      propertyText(representative.feature.properties ?? {}, 'Name')
     const coordinates = representative.facility ? representative.feature.geometry.coordinates : [
       members.reduce((sum, member) => sum + member.feature.geometry.coordinates[0], 0) / members.length,
       members.reduce((sum, member) => sum + member.feature.geometry.coordinates[1], 0) / members.length,
@@ -78,6 +88,8 @@ export function transportStations(pois: FeatureCollection<Point>, mode: StationM
     return {
       type: 'Feature', id,
       properties: { ...representative.feature.properties,
+        _mapLabel: mapLabel,
+        _labelSortKey: -stops.length,
         _representativeSourceId: representative.sourceId,
         _stopIds: stops.map(stop => stop.sourceId) },
       geometry: { type: 'Point', coordinates },

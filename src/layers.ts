@@ -2,12 +2,13 @@ import type { FeatureCollection, Point } from 'geojson'
 import type { FilterSpecification, ImageSource, Map as MapLibreMap } from 'maplibre-gl'
 import { TRANSPORT, TRANSPORT_MODES, type TransportMode } from './transport'
 import { depotCategory, isStationMode, type StationMode } from './transport-stations'
+import type { BuildingPlaces } from './place-labels'
 
 export const GROUPS = {
   water: { label: '수역', source: 'water', layers: ['water-raster'], defaultVisible: true, color: '#a6d0dd' },
-  buildings: { label: '건물', source: 'buildings', layers: ['building-fill', 'building-outline'], defaultVisible: true, color: '#c49e86' },
+  buildings: { label: '건물', source: 'buildings', layers: ['building-fill', 'building-outline'], defaultVisible: true, color: '#ede0d8' },
   roads: { label: '도로', source: 'network', layers: ['road-casing', 'road-line'], defaultVisible: true, color: '#6f7977' },
-  tracks: { label: '철도', source: 'network', layers: ['track-casing', 'track-line'], defaultVisible: true, color: '#6b5967' },
+  tracks: { label: '철도', source: 'network', layers: ['track-casing', 'track-line', 'train-ties', 'train-line'], defaultVisible: true, color: '#858585' },
   pathways: { label: '보행로', source: 'network', layers: ['path-casing', 'path-line'], defaultVisible: false, color: '#a78052' },
   waterways: { label: '항로', source: 'network', layers: ['waterway-casing', 'waterway-line'], defaultVisible: false, color: '#5c97a7' },
   districts: { label: '행정구역', source: 'area', layers: ['district-fill', 'district-outline'], defaultVisible: false, color: '#679c83' },
@@ -33,6 +34,8 @@ export const INITIAL_VISIBILITY = Object.fromEntries(
 
 const objectFilter = (object: string): FilterSpecification =>
   ['in', object, ['get', '_objectTypes']]
+const trackFilter = (category: 'Train' | 'Tram'): FilterSpecification =>
+  ['all', ['in', 'Track', ['get', '_objectTypes']], ['==', ['get', 'Category'], category]]
 const areaObjectFilter = (object: string): FilterSpecification => ['==', ['get', 'Object'], object]
 
 export function addWaterLayer(map: MapLibreMap, coordinates: [[number, number], [number, number], [number, number], [number, number]], image: HTMLImageElement) {
@@ -50,11 +53,11 @@ export function addWaterLayer(map: MapLibreMap, coordinates: [[number, number], 
 export function addBaseLayers(map: MapLibreMap) {
   map.addLayer({
     id: 'building-fill', type: 'fill', source: 'buildings',
-    paint: { 'fill-color': '#c49e86', 'fill-opacity': 0.9 },
+    paint: { 'fill-color': '#ede0d8', 'fill-opacity': 0.9 },
   })
   map.addLayer({
     id: 'building-outline', type: 'line', source: 'buildings',
-    paint: { 'line-color': '#6f584d', 'line-width': 1 },
+    paint: { 'line-color': '#c0a699', 'line-width': 1 },
   })
 
   map.addLayer({
@@ -88,14 +91,27 @@ export function addBaseLayers(map: MapLibreMap) {
     paint: { 'line-color': '#f4dfae', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.8, 15, 3] },
   })
   map.addLayer({
-    id: 'track-casing', type: 'line', source: 'network', filter: objectFilter('Track'),
+    id: 'track-casing', type: 'line', source: 'network', filter: trackFilter('Tram'),
     layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': '#534750', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 15, 6] },
   })
   map.addLayer({
-    id: 'track-line', type: 'line', source: 'network', filter: objectFilter('Track'),
+    id: 'track-line', type: 'line', source: 'network', filter: trackFilter('Tram'),
     layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': '#d8cbd1', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.7, 15, 3] },
+  })
+  map.addLayer({
+    id: 'train-ties', type: 'line', source: 'network', filter: trackFilter('Train'), minzoom: 12,
+    layout: { visibility: 'none', 'line-cap': 'butt', 'line-join': 'round' },
+    paint: { 'line-color': '#858585',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 12, 2.6, 16, 3.2],
+      'line-dasharray': [0.25, 2] },
+  })
+  map.addLayer({
+    id: 'train-line', type: 'line', source: 'network', filter: trackFilter('Train'),
+    layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#858585',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.6, 16, 1] },
   })
 }
 
@@ -140,6 +156,39 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
       }, 'selected-building-fill')
     }
   }
+}
+
+export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) {
+  map.addSource('building-places', { type: 'geojson', data: places })
+  map.addLayer({
+    id: 'place-building-label', type: 'symbol', source: 'building-places',
+    filter: ['==', ['get', 'tier'], 0],
+    layout: { 'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
+      'text-max-width': 11, 'text-padding': 5, 'symbol-sort-key': ['get', 'sortKey'] },
+    paint: { 'text-color': '#34513f', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+  })
+}
+
+export function setBuildingPlaceTier(map: MapLibreMap, tier: number) {
+  if (map.getLayer('place-building-label')) {
+    map.setFilter('place-building-label', ['<=', ['get', 'tier'], tier])
+  }
+}
+
+export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
+  map.addLayer({
+    id: 'place-subway-label', type: 'symbol', source: 'subway-stations',
+    minzoom: Math.max(0, overviewZoom - 0.6),
+    layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': true,
+      'icon-optional': true, 'text-optional': true,
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
+      'text-field': ['get', '_mapLabel'], 'text-font': ['Segoe UI'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
+      'text-variable-anchor': ['top', 'bottom', 'left', 'right'], 'text-radial-offset': 1.2,
+      'text-max-width': 10, 'text-padding': 5, 'symbol-sort-key': ['get', '_labelSortKey'] },
+    paint: { 'text-color': '#2b5b9c', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+  }, 'selected-route')
 }
 
 export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: FeatureCollection<Point>) {
@@ -213,7 +262,7 @@ export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: F
   map.addLayer({
     id: `transport-${mode}-poi`, type: 'symbol', source: `${mode}-stations`,
     layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': true,
-      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.8, 15, 1.2] },
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
   }, 'selected-route')
 }
 
@@ -221,6 +270,9 @@ export function setGroupVisibility(map: MapLibreMap, id: GroupId, visible: boole
   const next = ALWAYS_VISIBLE.has(id) ? true : visible
   for (const layerId of GROUPS[id].layers) {
     if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', next ? 'visible' : 'none')
+  }
+  if (id === 'subway' && map.getLayer('place-subway-label')) {
+    map.setLayoutProperty('place-subway-label', 'icon-image', next ? '' : 'subway-station')
   }
 }
 

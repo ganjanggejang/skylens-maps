@@ -30,13 +30,21 @@ describe('Carto network Object labels', () => {
     } } as unknown as MapLibreMap
     addBaseLayers(map)
     const data = network('Road, Track', 'Pathway, Road, Track', 'Track')
+    data.features[0].properties!.Category = 'Train'
+    data.features[1].properties!.Category = 'Tram'
+    data.features[2].properties!.Category = 'Subway'
     prepareNetworkObjects(data)
     const visible = (layer: string, index: number) => featureFilter(filters.get(layer), layer)
       .filter({ zoom: 15 }, { type: 2, properties: data.features[index].properties! })
     expect(visible('road-line', 0)).toBe(true)
     expect(visible('road-line', 1)).toBe(true)
     expect(visible('road-line', 2)).toBe(false)
-    expect(visible('track-line', 0)).toBe(true)
+    expect(visible('train-line', 0)).toBe(true)
+    expect(visible('train-ties', 0)).toBe(true)
+    expect(visible('track-line', 0)).toBe(false)
+    expect(visible('track-line', 1)).toBe(true)
+    expect(visible('train-line', 2)).toBe(false)
+    expect(visible('track-line', 2)).toBe(false)
     expect(visible('path-line', 1)).toBe(true)
   })
 })
