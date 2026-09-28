@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { GroupId } from './layers'
 import type { Selection } from './interaction'
 import { Search, type SearchEntry, type SearchSourceState } from './Search'
@@ -30,6 +30,7 @@ type Props = {
   onSearchSelect: (entry: SearchEntry) => void
   onStopFocus: (entry: SearchEntry) => void
   onBuildingRouteSelect: (entry: SearchEntry) => void
+  onBackToBuilding: (() => void) | null
   directionsOpen: boolean
   directionsOrigin: DirectionPlace | null
   directionsDestination: DirectionPlace | null
@@ -94,10 +95,11 @@ function uniqueRouteStops(stops: SearchEntry[]): SearchEntry[] {
   })
 }
 
-function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onStopFocus, onBuildingRouteSelect,
+function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onBack, onStopFocus, onBuildingRouteSelect,
   onDirectionsPlace }: {
     selection: Selection; routeStops: SearchEntry[]; buildingRoutes: SearchEntry[];
     poiState: SourceState['state']; routeState: SourceState['state']; onClose: () => void
+    onBack: (() => void) | null
     onStopFocus: (entry: SearchEntry) => void
     onBuildingRouteSelect: (entry: SearchEntry) => void
     onDirectionsPlace: (side: 'origin' | 'destination') => void
@@ -113,6 +115,7 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
   const listedStops = kind === 'route' ? uniqueRouteStops(routeStops) : []
   const isTransportBuilding = kind === 'building' && propertyText(properties, 'Category') === 'Public, Transportation'
   return <section className="detail" aria-label={t('detail')}>
+    {kind === 'route' && onBack && <button className="detail-back" type="button" onClick={onBack}>{t('back')}</button>}
     <button className="detail-close" type="button" onClick={onClose} aria-label={t('closeDetail')}>×</button>
     <span className="detail-kind">{t(kind)}</span>
     <h2>{title}</h2>
@@ -168,13 +171,14 @@ function Detail({ selection, routeStops, buildingRoutes, poiState, routeState, o
 
 export function Sidebar({ status, error, sourceStates, selection,
   routeStops, buildingRoutes, collapsed, onToggleCollapsed, onClearSelection, searchEntries, searchStates,
-  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, directionsOpen, directionsOrigin,
+  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, onBackToBuilding, directionsOpen, directionsOrigin,
   directionsDestination, directionsOutcome, transitOutcome, transitStatus, transitError,
   selectedDirectionsMode, onSelectDirectionsMode, onDirectionsLegSelect,
   directionsCalculating, directionsError, routingReady,
   onDirectionsOpen, onDirectionsClose, onDirectionPlace, onDirectionsSwap, onDirectionsCalculate }: Props) {
   const { t, language, setLanguage } = useI18n()
   const [searchActive, setSearchActive] = useState(false)
+  const panelRef = useRef<HTMLElement>(null)
   const expanded = directionsOpen || searchActive || selection !== null
   function openDirections() {
     setSearchActive(false)
@@ -186,8 +190,16 @@ export function Sidebar({ status, error, sourceStates, selection,
     onDirectionPlace(side, { entry, label: searchEntryLabel(entry, language) })
     openDirections()
   }
+  function showBuildingRoute(entry: SearchEntry) {
+    onBuildingRouteSelect(entry)
+    panelRef.current?.scrollTo({ top: 0 })
+  }
+  function backToBuilding() {
+    onBackToBuilding?.()
+    panelRef.current?.scrollTo({ top: 0 })
+  }
   return <>
-    <aside className={`panel${expanded ? ' is-expanded' : ''}`} id="map-sidebar" aria-label={t('menu')} hidden={collapsed}>
+    <aside ref={panelRef} className={`panel${expanded ? ' is-expanded' : ''}`} id="map-sidebar" aria-label={t('menu')} hidden={collapsed}>
       <div className="panel-header">
         <div className="eyebrow">Maps for CITIES: SKYLINES II</div>
         <h1>Skylens Maps</h1>
@@ -211,7 +223,8 @@ export function Sidebar({ status, error, sourceStates, selection,
             onDeactivate={() => setSearchActive(false)} onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
         {!directionsOpen && selection && <Detail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
           poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
-          onClose={onClearSelection} onStopFocus={onStopFocus} onBuildingRouteSelect={onBuildingRouteSelect}
+          onClose={onClearSelection} onBack={onBackToBuilding ? backToBuilding : null}
+          onStopFocus={onStopFocus} onBuildingRouteSelect={showBuildingRoute}
           onDirectionsPlace={fromDetail} />}
         {directionsOpen && !routingReady && <p className="notice" role="status">{t('routeDataLoading')}</p>}
       </>}
