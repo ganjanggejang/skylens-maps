@@ -469,7 +469,7 @@ export function MapView() {
           [mode, transportCountsRef.current.poi[mode] + transportCountsRef.current.route[mode]])) }))
         for (const mode of TRANSPORT_MODES) setGroupVisibility(map, mode, visibilityRef.current[mode])
         searchEntriesRef.current = [...searchEntriesRef.current, ...additions]
-        setSearchEntries([...searchEntriesRef.current])
+        setSearchEntries(searchEntriesRef.current)
         updateTransportFocus(map)
         setSearchStates(previous => ({ ...previous, [key]: additions.length ? 'ready' : 'empty' }))
         updateSource(key, { state: additions.length ? 'ready' : 'empty' })
