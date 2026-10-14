@@ -7,13 +7,16 @@ import { registerBuildingIcons } from './building-icons'
 import { hoverColor } from './hover-color'
 
 const HOVERED: ExpressionSpecification = ['boolean', ['feature-state', 'hover'], false]
+const PRESSED: ExpressionSpecification = ['boolean', ['feature-state', 'pressed'], false]
+const PRESS_PROGRESS: ExpressionSpecification = ['coalesce', ['feature-state', 'pressProgress'], 0]
+const PRESS_TRANSITION = { duration: 120, delay: 0 }
 
 function addHoverIconLayer(map: MapLibreMap, id: string, source: string,
-  icon: string | ExpressionSpecification) {
+  icon: string | ExpressionSpecification, pressed = false) {
   map.addLayer({ id, type: 'symbol', source,
     layout: { 'icon-image': icon, 'icon-allow-overlap': true, 'icon-ignore-placement': true,
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
-    paint: { 'icon-opacity': ['case', HOVERED, 1, 0],
+    paint: { 'icon-opacity': ['case', pressed ? PRESSED : ['all', HOVERED, ['!', PRESSED]], 1, 0],
       'icon-opacity-transition': { duration: 0, delay: 0 } },
   })
 }
@@ -165,8 +168,13 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
         filter: depot ? ['in', depot, ['get', 'Category']] :
           ['in', mode, ['get', '_transportModes']],
         layout: { visibility: 'none' },
-        paint: { 'circle-color': ['case', HOVERED, hoverColor(group.color), group.color],
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 15, 6],
+        paint: { 'circle-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+          0, ['case', HOVERED, hoverColor(group.color), group.color], 1, hoverColor(hoverColor(group.color))],
+          'circle-color-transition': PRESS_TRANSITION,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'],
+            10, ['*', 3, ['-', 1, ['*', 0.1, PRESS_PROGRESS]]],
+            15, ['*', 6, ['-', 1, ['*', 0.1, PRESS_PROGRESS]]]],
+          'circle-radius-transition': PRESS_TRANSITION,
           'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 1.5 },
       }, 'selected-building-fill')
     }
@@ -191,11 +199,16 @@ export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) 
       'text-max-width': 11,
       'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
       'symbol-sort-key': ['get', 'sortKey'] },
-    paint: { 'text-color': ['case', HOVERED, ['get', 'hoverColor'], ['get', 'color']],
+    paint: { 'text-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+      0, ['case', HOVERED, ['get', 'hoverColor'], ['get', 'color']], 1, ['get', 'pressColor']],
+      'text-color-transition': PRESS_TRANSITION,
+      'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 },
       'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   })
   addHoverIconLayer(map, 'place-building-hover', 'building-places',
     ['case', ['==', ['get', 'icon'], ''], '', ['concat', ['get', 'icon'], '-hover']])
+  addHoverIconLayer(map, 'place-building-pressed', 'building-places',
+    ['case', ['==', ['get', 'icon'], ''], '', ['concat', ['get', 'icon'], '-pressed']], true)
 }
 
 export function setBuildingPlaceTier(map: MapLibreMap, tier: number) {
@@ -219,14 +232,20 @@ export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
       'text-max-width': 10,
       'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
       'symbol-sort-key': ['get', '_labelSortKey'] },
-    paint: { 'text-color': ['case', HOVERED, hoverColor(TRANSPORT.subway.color), TRANSPORT.subway.color],
+    paint: { 'text-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+      0, ['case', HOVERED, hoverColor(TRANSPORT.subway.color), TRANSPORT.subway.color],
+      1, hoverColor(hoverColor(TRANSPORT.subway.color))],
+      'text-color-transition': PRESS_TRANSITION,
+      'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 },
       'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   }, 'selected-route')
   addHoverIconLayer(map, 'place-subway-hover', 'subway-stations', 'subway-station-hover')
+  addHoverIconLayer(map, 'place-subway-pressed', 'subway-stations', 'subway-station-pressed', true)
 }
 
 export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: FeatureCollection<Point>) {
-  for (const [suffix, color] of [['', TRANSPORT[mode].color], ['-hover', hoverColor(TRANSPORT[mode].color)]]) {
+  for (const [suffix, color] of [['', TRANSPORT[mode].color], ['-hover', hoverColor(TRANSPORT[mode].color)],
+    ['-pressed', hoverColor(hoverColor(TRANSPORT[mode].color))]]) {
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = 48
     const context = canvas.getContext('2d')
@@ -300,9 +319,11 @@ export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: F
       'icon-ignore-placement': false,
       'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
+    paint: { 'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 } },
   }, 'selected-route')
   if (mode !== 'subway') {
     addHoverIconLayer(map, `transport-${mode}-hover`, `${mode}-stations`, `${mode}-station-hover`)
+    addHoverIconLayer(map, `transport-${mode}-pressed`, `${mode}-stations`, `${mode}-station-pressed`, true)
   }
 }
 

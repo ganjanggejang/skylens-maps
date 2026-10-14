@@ -67,7 +67,8 @@ export function registerBuildingIcons(map: { addImage: (id: string, image: Image
   options: { pixelRatio: number }) => unknown }) {
   for (const [kind, path] of Object.entries(ICON_PATHS)) {
     const baseColor = BUILDING_ICON_COLORS[kind as BuildingIcon]
-    for (const [suffix, color] of [['', baseColor], ['-hover', hoverColor(baseColor)]]) {
+    for (const [suffix, color] of [['', baseColor], ['-hover', hoverColor(baseColor)],
+      ['-pressed', hoverColor(hoverColor(baseColor))]]) {
       const canvas = document.createElement('canvas')
       canvas.width = canvas.height = 48
       const context = canvas.getContext('2d')

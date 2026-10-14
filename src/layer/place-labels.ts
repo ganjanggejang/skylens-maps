@@ -4,7 +4,7 @@ import { BUILDING_ICON_COLORS, buildingIcon } from './building-icons'
 import { hoverColor } from './hover-color'
 
 export type BuildingPlace = Feature<Point, { label: string; tier: number; sortKey: number;
-  addressKey: string; category: string; icon: string; color: string; hoverColor: string }>
+  addressKey: string; category: string; icon: string; color: string; hoverColor: string; pressColor: string }>
 export type BuildingPlaces = FeatureCollection<Point, BuildingPlace['properties']>
 
 const METERS_PER_DEGREE = 111_320
@@ -203,7 +203,8 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
       properties: { label: isPark && icon !== 'venue' ? '' : name,
         tier, sortKey: -score, addressKey: addressKey(properties), category,
         icon: icon ? `building-${icon}` : '', color: icon ? BUILDING_ICON_COLORS[icon] : '#34513f',
-        hoverColor: hoverColor(icon ? BUILDING_ICON_COLORS[icon] : '#34513f') } })
+        hoverColor: hoverColor(icon ? BUILDING_ICON_COLORS[icon] : '#34513f'),
+        pressColor: hoverColor(hoverColor(icon ? BUILDING_ICON_COLORS[icon] : '#34513f')) } })
   }
   return { type: 'FeatureCollection', features }
 }

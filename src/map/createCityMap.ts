@@ -62,6 +62,7 @@ export function createCityMap(container: HTMLDivElement, data: ReturnType<typeof
         addDirectionsLayers(map)
         map.moveLayer('place-building-label')
         map.moveLayer('place-building-hover')
+        map.moveLayer('place-building-pressed')
         installMapEvents(map, lookup, () => entries, onSelect)
         constrainMap(map, all)
         overviewZoom = map.cameraForBounds(city, { padding: fitPadding(), maxZoom: 15 })?.zoom ?? 12
