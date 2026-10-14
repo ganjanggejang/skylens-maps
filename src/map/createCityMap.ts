@@ -65,7 +65,7 @@ export function createCityMap(container: HTMLDivElement, data: ReturnType<typeof
         let shownTier = -1
         const updatePlaceZoom = () => {
           const delta = map.getZoom() - overviewZoom
-          const tier = delta >= 2.5 ? 2 : delta >= 1.2 ? 1 : 0
+          const tier = delta >= 3.5 ? 2 : delta >= 2 ? 1 : 0
           if (tier !== shownTier) { shownTier = tier; setBuildingPlaceTier(map, tier) }
         }
         map.on('zoom', updatePlaceZoom)

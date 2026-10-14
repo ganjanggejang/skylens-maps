@@ -2,9 +2,9 @@ import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import { normalizeText, propertyText } from '../data/building-name'
 import { buildingIcon } from './building-icons'
 
-export type BuildingPlace = Feature<Polygon, { label: string; tier: number; sortKey: number;
+export type BuildingPlace = Feature<Point, { label: string; tier: number; sortKey: number;
   addressKey: string; category: string; icon: string }>
-export type BuildingPlaces = FeatureCollection<Polygon, BuildingPlace['properties']>
+export type BuildingPlaces = FeatureCollection<Point, BuildingPlace['properties']>
 
 const METERS_PER_DEGREE = 111_320
 const LOCAL_RADIUS = 600
@@ -129,6 +129,8 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
     if (!name) continue
     const category = propertyText(properties, 'Category')
     if (category.split(',').some(token => token.trim() === 'Extension')) continue
+    const isPark = category.split(',').some(token => token.trim() === 'Park')
+    if (isPark && !icon) continue
     let score: number
     let tier: number
     if (icon === 'museum' || icon === 'hotel' || icon === 'restaurant' || icon === 'venue') {
@@ -194,8 +196,11 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
       if (score < 45) continue
       tier = score >= 115 ? 0 : score >= 80 ? 1 : 2
     }
-    features.push({ type: 'Feature', id: item.index, geometry: item.feature.geometry,
-      properties: { label: name, tier, sortKey: -score, addressKey: addressKey(properties), category,
+    // A single point keeps the symbol anchor stable when the building crosses tile boundaries.
+    features.push({ type: 'Feature', id: item.index,
+      geometry: { type: 'Point', coordinates: center(item.feature.geometry) },
+      properties: { label: isPark && icon !== 'venue' ? '' : name,
+        tier, sortKey: -score, addressKey: addressKey(properties), category,
         icon: icon ? `building-${icon}` : '' } })
   }
   return { type: 'FeatureCollection', features }

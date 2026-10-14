@@ -100,6 +100,31 @@ describe('buildingPlaces', () => {
     expect(places.features[0].properties.sortKey).toBeLessThan(places.features[1].properties.sortKey)
   })
 
+  it('hides Park names except venues, while keeping other specialized icons', () => {
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [
+      building('Unique park', 'Unzoned', 'park', 'Public, Park', 0),
+      building('Art collection', 'Unzoned', 'Art Museum', 'Public, Park', .01),
+      building('Grand Arena', 'Unzoned', 'arena', ' Park , Public ', .02),
+      building('Park school', 'Unzoned', 'school', 'Public, Education, Park', .03),
+      building('Parking school', 'Unzoned', 'school', 'Public, Education', .04),
+    ] })
+    expect(places.features.map(feature => [feature.id, feature.properties.label, feature.properties.icon]))
+      .toEqual([[1, '', 'building-museum'], [2, 'Grand Arena', 'building-venue'], [3, '', 'building-school'],
+        [4, 'Parking school', 'building-school']])
+  })
+
+  it('uses one stable point per building across tile boundaries, preserving source IDs', () => {
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [
+      building('Arena', 'Unzoned', 'stadium', 'Public, Park', -.001, .002),
+      building('Hospital', 'Unzoned', 'hospital', 'Public, Health', .001, .002),
+    ] })
+    expect(places.features.map(feature => [feature.id, feature.geometry])).toEqual([
+      [0, { type: 'Point', coordinates: [0, .001] }],
+      [1, { type: 'Point', coordinates: [.002, .001] }],
+    ])
+    expect(places.features.map(feature => feature.properties.label)).toEqual(['Arena', 'Hospital'])
+  })
+
   it('drops repeated generic park names while keeping a distinct civic building', () => {
     const parks = Array.from({ length: 12 }, (_, index) =>
       building('Small park', 'Unzoned', 'park', 'Public, Park', index * .001))

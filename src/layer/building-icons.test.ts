@@ -52,6 +52,7 @@ describe('important building icons', () => {
     expect(places.features.map(f => [f.id, f.properties.icon, f.properties.tier])).toEqual([
       [0, 'building-hotel', 1], [1, 'building-museum', 1],
     ])
+    expect(places.features[1].properties.label).toBe('')
   })
 
   it('replaces generic hotel and restaurant zone names with brands while preserving custom names', () => {

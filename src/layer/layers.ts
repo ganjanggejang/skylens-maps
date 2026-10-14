@@ -165,14 +165,16 @@ export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) 
   map.addLayer({
     id: 'place-building-label', type: 'symbol', source: 'building-places',
     filter: ['==', ['get', 'tier'], 0],
-    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': true, 'text-optional': true,
+    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': true, 'text-optional': false,
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
-      'icon-padding': 3,
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
-      'text-radial-offset': ['case', ['!=', ['get', 'icon'], ''], 1.2, 0],
+      'text-radial-offset': ['case', ['!=', ['get', 'icon'], ''], 1.05, 0],
       'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
-      'text-max-width': 11, 'text-padding': 5, 'symbol-sort-key': ['get', 'sortKey'] },
+      'text-max-width': 11,
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
+      'symbol-sort-key': ['get', 'sortKey'] },
     paint: { 'text-color': '#34513f', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   })
 }
