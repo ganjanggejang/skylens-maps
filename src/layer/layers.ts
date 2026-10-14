@@ -3,6 +3,7 @@ import type { FilterSpecification, ImageSource, Map as MapLibreMap } from 'mapli
 import { TRANSPORT, TRANSPORT_MODES, type TransportMode } from '../data/transport'
 import { depotCategory, isStationMode, type StationMode } from '../data/transport-stations'
 import type { BuildingPlaces } from './place-labels'
+import { registerBuildingIcons } from './building-icons'
 
 export const GROUPS = {
   water: { label: '수역', source: 'water', layers: ['water-raster'], defaultVisible: true, color: '#a6d0dd' },
@@ -159,11 +160,17 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
 }
 
 export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) {
+  registerBuildingIcons(map)
   map.addSource('building-places', { type: 'geojson', data: places })
   map.addLayer({
     id: 'place-building-label', type: 'symbol', source: 'building-places',
     filter: ['==', ['get', 'tier'], 0],
-    layout: { 'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
+    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': true, 'text-optional': true,
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
+      'icon-padding': 3,
+      'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+      'text-radial-offset': ['case', ['!=', ['get', 'icon'], ''], 1.2, 0],
+      'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
       'text-max-width': 11, 'text-padding': 5, 'symbol-sort-key': ['get', 'sortKey'] },
     paint: { 'text-color': '#34513f', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },

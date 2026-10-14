@@ -22,7 +22,58 @@ describe('buildingPlaces', () => {
 
     expect(places.features).toHaveLength(1)
     expect(places.features[0].id).toBe(0)
-    expect(places.features[0].properties).toMatchObject({ label: 'Brooklyn Tower', tier: 0 })
+    expect(places.features[0].properties).toMatchObject({ label: 'Brooklyn Tower', tier: 0, icon: 'building-landmark' })
+  })
+
+  it('selects landmarks by city-relative size and occupancy, without name keywords', () => {
+    const ordinary = Array.from({ length: 100 }, (_, index) =>
+      building('Residential', 'Residential', 'ordinary', 'Property', .02 + index * .001, .0002, 40))
+    const candidate = building('새로운 중심', 'Residential', 'custom asset', 'Property', 0, .0005, 700)
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [candidate, ...ordinary] })
+    expect(places.features[0].properties.icon).toBe('building-landmark')
+    expect(buildingPlaces({ type: 'FeatureCollection', features: [candidate] }).features[0].properties.icon).toBe('')
+  })
+
+  it('requires at least 700 residents or employees, without adding the two counts', () => {
+    const ordinary = Array.from({ length: 100 }, (_, index) =>
+      building('Residential', 'Residential', 'ordinary', 'Property', .02 + index * .001, .0002, 40))
+    const candidate = building('Civic Tower', 'Residential', 'custom asset', 'Property', 0, .0005, 699)
+    const icon = () => buildingPlaces({ type: 'FeatureCollection', features: [candidate, ...ordinary] }).features[0].properties.icon
+    expect(icon()).toBe('')
+    candidate.properties!.Employee = 699
+    expect(icon()).toBe('')
+    candidate.properties!.Employee = 700
+    expect(icon()).toBe('building-landmark')
+    candidate.properties!.Employee = 0
+    candidate.properties!.Resident = 700
+    expect(icon()).toBe('building-landmark')
+  })
+
+  it('does not classify rarity, a tower name, or a large footprint alone as a landmark', () => {
+    const ordinary = Array.from({ length: 100 }, (_, index) =>
+      building('Residential', 'Residential', 'ordinary', 'Property', .1 + index * .001, .0002, 40))
+    const candidates = [
+      building('Tiny Tower', 'Residential', 'tiny', 'Property', 0, .0001, 500),
+      building('Empty Monument', 'Residential', 'empty', 'Property', .01, .0005, 0),
+      ...Array.from({ length: 4 }, (_, i) => building(`Repeated ${i}`, 'Residential', 'repeated', 'Property', .02 + i * .001, .0005, 500)),
+      building('Residential', 'Residential', 'generic', 'Property', .03, .0005, 500),
+    ]
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [...candidates, ...ordinary] })
+    expect(places.features.every(f => f.properties.icon !== 'building-landmark')).toBe(true)
+  })
+
+  it('keeps specialized icons and excludes industrial and transport buildings', () => {
+    const ordinary = Array.from({ length: 100 }, (_, index) =>
+      building('Commercial', 'Commercial', 'ordinary', 'Property', .1 + index * .001, .0002, 40))
+    for (const feature of ordinary) feature.properties!.Zoning = 'Commercial'
+    const hotel = building('Grand Hotel', 'Commercial', 'Grand Hotel', 'Property', 0, .0005, 500)
+    hotel.properties!.Zoning = 'Commercial'
+    const factory = building('Great Works', 'Industrial', 'factory', 'Property', .01, .0005, 500)
+    factory.properties!.Zoning = 'Industrial'
+    const station = building('Central Tower', 'Unzoned', 'station', 'Public, Transportation', .02, .0005, 500)
+    const places = buildingPlaces({ type: 'FeatureCollection', features: [hotel, factory, station, ...ordinary] })
+    expect(places.features.find(f => f.id === 0)?.properties.icon).toBe('building-hotel')
+    expect(places.features.every(f => f.properties.icon !== 'building-landmark')).toBe(true)
   })
 
   it('keeps individually named ordinary properties for closer zoom and skips parking extensions', () => {
