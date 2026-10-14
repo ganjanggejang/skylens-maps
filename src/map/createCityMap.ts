@@ -139,8 +139,8 @@ export function createCityMap(
         key === 'poi'
           ? poiModes(feature.properties?.Category)
           : [routeMode(feature.properties?.Transport)].filter(
-              (mode): mode is TransportMode => mode !== null,
-            )
+            (mode): mode is TransportMode => mode !== null,
+          )
       feature.properties = {
         ...feature.properties,
         ...(key === 'poi' ? { _transportModes: modes } : { _transportMode: modes[0] ?? '' }),

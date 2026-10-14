@@ -71,7 +71,8 @@ export function placeCoordinate(geometry: Point | LineString | Polygon): Coordin
   if (geometry.type === 'LineString') {
     const points = geometry.coordinates
     if (!points.length) throw new Error('빈 도로 선형')
-    const lengths = points.slice(1).map((point, index) => distanceMeters(points[index] as Coordinate, point as Coordinate))
+    const lengths = points.slice(1)
+      .map((point, index) => distanceMeters(points[index] as Coordinate, point as Coordinate))
     let remaining = lengths.reduce((sum, value) => sum + value, 0) / 2
     for (let index = 0; index < lengths.length; index++) {
       if (remaining <= lengths[index]) {

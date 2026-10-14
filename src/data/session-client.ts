@@ -6,8 +6,7 @@ export function createDataSession() {
   let dataRoot = '/data'
   let activeSnapshotId = ''
   async function fetchMapResource(input: string | URL, init?: RequestInit) {
-    try { return await fetch(input, init) }
-    catch {
+    try { return await fetch(input, init) } catch {
       throw new Error(import.meta.env.DEV ? '개발 서버에 연결할 수 없습니다' :
         '게임과 지도 연결이 끊겼습니다. 게임이 실행 중인지 확인한 뒤 게임에서 지도를 다시 여세요.')
     }

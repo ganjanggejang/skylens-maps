@@ -7,21 +7,21 @@ export type StationMode = typeof STATION_MODES[number]
 
 const categories: Record<StationMode, { stops: string[]; facilities: string[]; depot?: string;
   maxDistance: number; matchNameAcrossAddresses: boolean }> = {
-  bus: { stops: ['StopBus'], facilities: ['BuildingBus'], depot: 'DepotBus',
-    maxDistance: 120, matchNameAcrossAddresses: true },
-  train: { stops: ['StopPassengerTrain', 'StopCargoTrain'],
-    facilities: ['BuildingPassengerTrain', 'BuildingCargoTrain'], depot: 'DepotTrain',
-    maxDistance: 1000, matchNameAcrossAddresses: false },
-  tram: { stops: ['StopTram'], facilities: ['BuildingTram'], depot: 'DepotTram',
-    maxDistance: 120, matchNameAcrossAddresses: true },
-  subway: { stops: ['StopSubway'], facilities: ['BuildingSubway'], depot: 'DepotSubway',
-    maxDistance: 120, matchNameAcrossAddresses: false },
-  ship: { stops: ['StopPassengerShip', 'StopCargoShip'],
-    facilities: ['BuildingPassengerShip', 'BuildingCargoShip'],
-    maxDistance: 1200, matchNameAcrossAddresses: false },
-  ferry: { stops: ['StopFerry'], facilities: ['BuildingFerry'], depot: 'DepotFerry',
-    maxDistance: 200, matchNameAcrossAddresses: false },
-}
+    bus: { stops: ['StopBus'], facilities: ['BuildingBus'], depot: 'DepotBus',
+      maxDistance: 120, matchNameAcrossAddresses: true },
+    train: { stops: ['StopPassengerTrain', 'StopCargoTrain'],
+      facilities: ['BuildingPassengerTrain', 'BuildingCargoTrain'], depot: 'DepotTrain',
+      maxDistance: 1000, matchNameAcrossAddresses: false },
+    tram: { stops: ['StopTram'], facilities: ['BuildingTram'], depot: 'DepotTram',
+      maxDistance: 120, matchNameAcrossAddresses: true },
+    subway: { stops: ['StopSubway'], facilities: ['BuildingSubway'], depot: 'DepotSubway',
+      maxDistance: 120, matchNameAcrossAddresses: false },
+    ship: { stops: ['StopPassengerShip', 'StopCargoShip'],
+      facilities: ['BuildingPassengerShip', 'BuildingCargoShip'],
+      maxDistance: 1200, matchNameAcrossAddresses: false },
+    ferry: { stops: ['StopFerry'], facilities: ['BuildingFerry'], depot: 'DepotFerry',
+      maxDistance: 200, matchNameAcrossAddresses: false },
+  }
 
 type StationPoi = { feature: Feature<Point>; sourceId: number; facility: boolean;
   address: string; name: string }

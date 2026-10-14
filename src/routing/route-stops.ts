@@ -71,7 +71,8 @@ export function nearbyStops(route: PlaceEntry, entries: PlaceEntry[]): PlaceEntr
     const position = projectNearby(entry.geometry.coordinates as Coordinate)
     return position ? [{ entry, ...position }] : []
   })
-  candidates.sort((a, b) => a.distance - b.distance || a.entry.selection.sourceFeatureId - b.entry.selection.sourceFeatureId)
+  candidates.sort((a, b) => a.distance - b.distance ||
+    a.entry.selection.sourceFeatureId - b.entry.selection.sourceFeatureId)
   const stations = new Map<string, typeof candidates>()
   for (const candidate of candidates) {
     const properties = candidate.entry.selection.properties

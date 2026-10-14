@@ -87,8 +87,7 @@ export function useDirections() {
       }
       if (!('requestId' in message) || message.requestId !== routingRequestRef.current) return
       if (message.type === 'transit-result') {
-        if (message.error !== undefined) { setTransitStatus('error'); setTransitError(message.error) }
-        else { setTransitOutcome(message.outcome); setTransitStatus('ready') }
+        if (message.error !== undefined) { setTransitStatus('error'); setTransitError(message.error) } else { setTransitOutcome(message.outcome); setTransitStatus('ready') }
         return
       }
       setDirectionsCalculating(false)
@@ -151,10 +150,13 @@ export function useDirections() {
     transitPendingRef.current = null
   }, [])
 
-  const lifecycle = useMemo(() => ({ initializeRouting, provideTransitData, failTransitData, disposeRouting, resetDirections }),
-    [initializeRouting, provideTransitData, failTransitData, disposeRouting, resetDirections])
+  const lifecycle = useMemo(() => ({
+    initializeRouting, provideTransitData, failTransitData, disposeRouting, resetDirections,
+  }),
+  [initializeRouting, provideTransitData, failTransitData, disposeRouting, resetDirections])
 
-  return { lifecycle, directionsOrigin, directionsDestination, directionsOutcome, transitOutcome, selectedDirectionsMode,
+  return { lifecycle, directionsOrigin, directionsDestination, directionsOutcome, transitOutcome,
+    selectedDirectionsMode,
     transitStatus, transitError, directionsCalculating, directionsError, routingReady, setSelectedDirectionsMode,
     setDirectionPlace, calculateDirections, swapDirections, resetDirections, initializeRouting,
     provideTransitData, failTransitData, disposeRouting }

@@ -49,7 +49,8 @@ type Props = {
 
 export function Sidebar({ status, error, sourceStates, selection,
   routeStops, buildingRoutes, collapsed, onToggleCollapsed, onClearSelection, searchEntries,
-  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, onBackToBuilding, directionsOpen, directionsOrigin,
+  onSearchActivate, onSearchSelect, onStopFocus, onBuildingRouteSelect, onBackToBuilding,
+  directionsOpen, directionsOrigin,
   directionsDestination, directionsOutcome, transitOutcome, transitStatus, transitError,
   selectedDirectionsMode, onSelectDirectionsMode, onDirectionsLegSelect,
   directionsCalculating, directionsError, routingReady,
@@ -93,13 +94,18 @@ export function Sidebar({ status, error, sourceStates, selection,
           entries={searchEntries} origin={directionsOrigin} destination={directionsDestination}
           outcome={directionsOutcome} calculating={directionsCalculating} error={directionsError}
           transitOutcome={transitOutcome} transitStatus={transitStatus} transitError={transitError}
-          selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode} onLegSelect={onDirectionsLegSelect}
+          selectedMode={selectedDirectionsMode} onSelectMode={onSelectDirectionsMode}
+          onLegSelect={onDirectionsLegSelect}
           onOrigin={place => onDirectionPlace('origin', place)} onDestination={place => onDirectionPlace('destination', place)}
-          onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose} onActivate={onSearchActivate} /> :
-          <Search entries={searchEntries} optionalStates={{ poi: sourceStates.poi.state, route: sourceStates.route.state }}
+          onSwap={onDirectionsSwap} onCalculate={onDirectionsCalculate} onClose={onDirectionsClose}
+          onActivate={onSearchActivate} /> :
+          <Search entries={searchEntries}
+            optionalStates={{ poi: sourceStates.poi.state, route: sourceStates.route.state }}
             onActivate={() => { setSearchActive(true); onSearchActivate() }}
-            onDeactivate={() => setSearchActive(false)} onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
-        {!directionsOpen && selection && <SelectionDetail selection={selection} routeStops={routeStops} buildingRoutes={buildingRoutes}
+            onDeactivate={() => setSearchActive(false)}
+            onSelect={entry => { setSearchActive(false); onSearchSelect(entry) }} />}
+        {!directionsOpen && selection && <SelectionDetail selection={selection} routeStops={routeStops}
+          buildingRoutes={buildingRoutes}
           poiState={sourceStates.poi.state} routeState={sourceStates.route.state}
           onClose={onClearSelection} onBack={onBackToBuilding ? backToBuilding : null}
           onStopFocus={onStopFocus} onBuildingRouteSelect={showBuildingRoute}

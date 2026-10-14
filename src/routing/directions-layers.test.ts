@@ -18,7 +18,9 @@ it('renders connected routing edges as one line without joining a real gap', () 
 
 it('replaces the map overlay when switching between vehicle and transit results', () => {
   const data: Record<string, unknown> = {}
-  const map = { getSource: (name: string) => ({ setData: (value: unknown) => { data[name] = value } }) } as unknown as MapLibreMap
+  const map = {
+    getSource: (name: string) => ({ setData: (value: unknown) => { data[name] = value } }),
+  } as unknown as MapLibreMap
   const car = { distance: 100, seconds: 20, accessDistance: 0, featureIds: [1],
     coordinates: [[[0, 0], [0.001, 0]]] as [[number, number], [number, number]][] }
   const transit = { distance: 100, seconds: 300, transfers: 0, assumptions: [], legs: [
