@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
-import { SearchInput } from './SearchInput'
-import { searchEntryLabel, type SearchEntry } from './search-model'
-import type { RouteOutcome, TransitOutcome } from './routing/types'
-import { useI18n, localizeKnownError, localizeGeneratedName } from './i18n'
+import { SearchInput } from '../search/SearchInput'
+import type { PlaceEntry } from '../data/place'
+import { searchEntryLabel } from '../search/search-model'
+import type { RouteOutcome, TransitOutcome } from './types'
+import { useI18n, localizeKnownError, localizeGeneratedName } from '../i18n'
 import './directions.css'
 
-export type DirectionPlace = { entry: SearchEntry; label: string }
+import type { DirectionPlace } from './directions-model'
 
 export function Directions({ entries, origin, destination, outcome, transitOutcome, transitStatus, transitError,
   selectedMode, onSelectMode, onLegSelect, calculating, error, onOrigin, onDestination,
   onSwap, onCalculate, onClose, onActivate }: {
-  entries: SearchEntry[]; origin: DirectionPlace | null; destination: DirectionPlace | null
+  entries: PlaceEntry[]; origin: DirectionPlace | null; destination: DirectionPlace | null
   outcome: RouteOutcome | null; calculating: boolean; error: string
   transitOutcome: TransitOutcome | null; transitStatus: 'loading' | 'calculating' | 'ready' | 'error'
   transitError: string; selectedMode: 'vehicle' | 'transit'
@@ -28,7 +29,7 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (destination) setDestinationQuery(searchEntryLabel(destination.entry, language)) }, [destination, language])
   const places = entries.filter(entry => entry.selection.kind !== 'route')
-  function select(entry: SearchEntry, side: 'origin' | 'destination') {
+  function select(entry: PlaceEntry, side: 'origin' | 'destination') {
     const place = { entry, label: searchEntryLabel(entry, language) }
     if (side === 'origin') { setOriginQuery(place.label); onOrigin(place) }
     else { setDestinationQuery(place.label); onDestination(place) }

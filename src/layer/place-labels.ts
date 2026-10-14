@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
-import { normalizeText, propertyText } from './building-name'
+import { normalizeText, propertyText } from '../data/building-name'
 
 export type BuildingPlace = Feature<Polygon, { label: string; tier: number; sortKey: number;
   addressKey: string; category: string }>

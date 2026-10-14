@@ -1,10 +1,10 @@
-import type { LineString, Point, Polygon } from 'geojson'
-import type { Selection } from './interaction'
-import { brandMatchesQuery, buildingBrand, buildingTitle, normalizeText, propertyText } from './building-name'
-import type { Language } from './i18n'
+import type { PlaceEntry } from '../data/place'
+import type { SourceState } from '../data/types'
+import type { Selection } from '../data/selection'
+import { brandMatchesQuery, buildingBrand, buildingTitle, normalizeText, propertyText } from '../data/building-name'
+import type { Language } from '../i18n'
 
-export type SearchEntry = { selection: Selection; geometry: Point | LineString | Polygon }
-export type SearchSourceState = 'idle' | 'loading' | 'ready' | 'empty' | 'error'
+export type SearchSourceState = SourceState['state']
 export const normalizeSearch = normalizeText
 
 export function searchAddress(properties: Record<string, unknown>) {
@@ -20,7 +20,7 @@ function buildingPoiKey(properties: Record<string, unknown>) {
 
 const hiddenPoiCategories = new Set(['UtilityPylon', 'TrafficLight'])
 
-export function dedupeSearchEntries(entries: SearchEntry[]) {
+export function dedupeSearchEntries(entries: PlaceEntry[]) {
   const buildings = new Set(entries.filter(entry => entry.selection.kind === 'building')
     .map(entry => buildingPoiKey(entry.selection.properties)).filter((key): key is string => key !== null))
   return entries.filter(entry => entry.selection.kind !== 'poi' || (
@@ -29,7 +29,7 @@ export function dedupeSearchEntries(entries: SearchEntry[]) {
   ))
 }
 
-export function searchEntries(entries: SearchEntry[], query: string): SearchEntry[] {
+export function searchEntries(entries: PlaceEntry[], query: string): PlaceEntry[] {
   const normalized = normalizeSearch(query)
   if (!normalized) return []
   return dedupeSearchEntries(entries).filter(({ selection }) => {
@@ -41,7 +41,7 @@ export function searchEntries(entries: SearchEntry[], query: string): SearchEntr
 
 const labels: Record<Selection['kind'], string> = { building: '건물', road: '도로', poi: '시설·정류장', route: '노선' }
 
-export function searchEntryLabel(entry: SearchEntry, language: Language = 'ko') {
+export function searchEntryLabel(entry: PlaceEntry, language: Language = 'ko') {
   const { selection } = entry
   if (selection.kind === 'building') {
     const title = buildingTitle(selection.properties, selection.id)
@@ -53,9 +53,9 @@ export function searchEntryLabel(entry: SearchEntry, language: Language = 'ko') 
     `이름 없는 ${labels[selection.kind]}`)
 }
 
-export function searchEntryKind(entry: SearchEntry, language: Language = 'ko') {
+export function searchEntryKind(entry: PlaceEntry, language: Language = 'ko') {
   return language === 'en' ? { building: 'Building', road: 'Road', poi: 'Facility · stop', route: 'Route' }[entry.selection.kind] : labels[entry.selection.kind]
 }
-export function searchEntryBrand(entry: SearchEntry) {
+export function searchEntryBrand(entry: PlaceEntry) {
   return entry.selection.kind === 'building' ? buildingBrand(entry.selection.properties) : ''
 }

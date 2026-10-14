@@ -1,15 +1,15 @@
 import { expect, it } from 'vitest'
 import type { Point } from 'geojson'
-import type { SearchEntry } from './Search'
+import type { PlaceEntry } from '../data/place'
 import { nearbyStops } from './route-stops'
-import { projectOnLine } from './routing/geometry'
+import { projectOnLine } from './geometry'
 
-function route(line: number[][], transport = 'Subway', count = 0): SearchEntry {
+function route(line: number[][], transport = 'Subway', count = 0): PlaceEntry {
   return { selection: { id: 'route:0', kind: 'route', sourceFeatureId: 0,
     properties: { Transport: transport, Stop: count } }, geometry: { type: 'LineString', coordinates: line } }
 }
 
-function stop(id: number, coordinates: number[], category = 'StopSubway'): SearchEntry & { geometry: Point } {
+function stop(id: number, coordinates: number[], category = 'StopSubway'): PlaceEntry & { geometry: Point } {
   return { selection: { id: `poi:${id}`, kind: 'poi', sourceFeatureId: id,
     properties: { Category: category } }, geometry: { type: 'Point', coordinates } }
 }

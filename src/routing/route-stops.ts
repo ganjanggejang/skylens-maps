@@ -1,6 +1,6 @@
-import type { SearchEntry } from './Search'
-import { poiModes, routeMode } from './transport'
-import { distanceMeters, projectOnLine, projectPoint, type Coordinate, type LinePosition } from './routing/geometry'
+import type { PlaceEntry } from '../data/place'
+import { poiModes, routeMode } from '../data/transport'
+import { distanceMeters, projectOnLine, projectPoint, type Coordinate, type LinePosition } from './geometry'
 
 const MAX_STOP_DISTANCE_METERS = 50
 // Water routes run offshore, so their centerlines can be farther from the dock markers.
@@ -8,7 +8,7 @@ const WATER_STOP_DISTANCE_METERS = { ship: 100, ferry: 80 } as const
 
 // Search entries are replaced when a source or snapshot changes. Weak keys let
 // old datasets (and their cached stop lists) be collected without manual cleanup.
-const stopCache = new WeakMap<SearchEntry[], Map<SearchEntry, SearchEntry[]>>()
+const stopCache = new WeakMap<PlaceEntry[], Map<PlaceEntry, PlaceEntry[]>>()
 
 function nearbyProjector(line: number[][], radius: number) {
   let progress = 0
@@ -45,7 +45,7 @@ export function distanceToRouteMeters(point: number[], line: number[][]): number
   return projectOnLine(point as [number, number], line)?.distance ?? Infinity
 }
 
-export function nearbyStops(route: SearchEntry, entries: SearchEntry[]): SearchEntry[] {
+export function nearbyStops(route: PlaceEntry, entries: PlaceEntry[]): PlaceEntry[] {
   if (route.selection.kind !== 'route' || route.geometry.type !== 'LineString') return []
   const mode = routeMode(route.selection.properties.Transport)
   if (!mode) return []

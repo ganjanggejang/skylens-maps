@@ -1,5 +1,5 @@
 import type { FeatureCollection, LineString } from 'geojson'
-import { hasNetworkObject } from '../network-objects'
+import { hasNetworkObject } from '../data/network-objects'
 import { ROUTING_CONFIG } from './config'
 import { accessPoints, distanceMeters, projectPoint, type Coordinate, type RoutePlace } from './geometry'
 import { shortestPath } from './shortest-path'
