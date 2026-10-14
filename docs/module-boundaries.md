@@ -43,7 +43,7 @@ Production files cannot import `.test.*` or `.spec.*` files. Test files may impo
 
 dependency-cruiser does not extract the local `new Worker(new URL(..., import.meta.url))` connection. The runner scans all `src` files, including workers, so their own imports and transitive dependencies are checked independently.
 
-A supplemental TypeScript AST check validates `Worker` and `SharedWorker` creation. The supported contract is a static URL relative to `import.meta.url`, targeting an existing `src/routing/*.worker.ts` file. These URL connections also obey module direction: data code cannot spawn a routing worker.
+A supplemental TypeScript AST check validates `Worker` and `SharedWorker` creation. The supported contract is a static URL relative to `import.meta.url`, targeting an existing `src/data/*.worker.ts` or `src/routing/*.worker.ts` file. These URL connections also obey module direction: data code cannot spawn a routing worker. Park area inference runs in a data worker and uses only data helpers.
 
 Missing entries, UI entries and non-static worker URLs fail with `worker-entry-boundary`. Add an explicit supported contract and fixtures if a future feature needs another worker location or URL form.
 

@@ -19,6 +19,7 @@ The local map server runs only while the game and mod are running. Existing brow
 ## Map features
 
 - Browse buildings, roads, railways, and water; optionally show paths, waterways, districts when present, and transit layers.
+- Shopping corridors inferred from nearby commercial and mixed-use buildings appear in pale yellow; park areas appear in pale green.
 - Zoom in to reveal more named buildings and subway stations. Distinctive named assets and prominent public buildings appear first; nearby labels avoid overlapping.
 - Click a building, road, route, or transit stop to inspect its exported details. Select a transit route to see nearby stops; select a transport facility to see nearby route candidates.
 - Search building names, brands, addresses, roads, POIs, and routes. Results can be used as an origin or destination.

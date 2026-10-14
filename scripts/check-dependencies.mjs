@@ -34,7 +34,7 @@ function checkWorkerEntries(root, graph) {
         if (isStatic && isModuleUrl) {
           target = slash(relative(root, resolve(dirname(resolve(root, module.source)), literal.text)))
         }
-        const isCoreWorker = /^src\/routing\/[^/]+[.]worker[.]ts$/.test(target)
+        const isCoreWorker = /^src\/(?:data|routing)\/[^/]+[.]worker[.]ts$/.test(target)
         if (!isCoreWorker || !modules.has(target)) {
           violations.push({ from: module.source, to: target,
             rule: { name: 'worker-entry-boundary', severity: 'error' } })

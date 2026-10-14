@@ -5,5 +5,5 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'mod' ? './' : '/',
   publicDir: mode === 'mod' ? false : 'public',
   plugins: [react()],
-  optimizeDeps: { exclude: ['maplibre-gl'] },
+  optimizeDeps: { include: ['clipper-lib'], exclude: ['maplibre-gl'] },
 }))
