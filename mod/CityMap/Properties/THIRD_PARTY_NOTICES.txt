@@ -631,6 +631,11 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ========================================================================
+clipper-lib 6.4.2 — BSL
+========================================================================
+[Boost Software License (BSL1.0)](http://www.boost.org/LICENSE_1_0.txt)
+
+========================================================================
 earcut 3.2.3 — ISC
 ========================================================================
 ISC License

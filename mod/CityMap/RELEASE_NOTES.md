@@ -1,12 +1,13 @@
-# SKYLENS MAPS 0.1.4
+# SKYLENS MAPS 0.1.5
 
-Version 0.1.4 adds transit mode icons, improves route discovery for transport facilities, reveals more place labels as you zoom in, and fixes roads with tram or bicycle lanes.
+Version 0.1.5 adds colored areas for parks and commercials, add icons for landmarks, museums, schools and public buildings.
 
-### Changes in 0.1.4
+### Changes in 0.1.5
 
-- Show bus, train, tram, subway, ship, and ferry icons on the map. Harbor and ferry terminal details now include nearby ship and ferry routes, with a way back after viewing a route.
-- Reveal more named buildings and subway stations as you zoom in. Improved label ranking and overlap handling prioritize distinctive buildings and transport facilities.
-- Fix road display and routing for roads with tram or bicycle lanes.
+- Show colored areas for parks and commercials.
+- Add icons for landmarks, museums, schools.
+- Hover and press effect when clicking icon.
+- Improved performance, reduced loading time, fixed errors.
 
 ## 한국어
 
@@ -30,4 +31,4 @@ Version 0.1.4 adds transit mode icons, improves route discovery for transport fa
 
 ## Credits and licenses
 
-Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.4 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
+Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.5 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
