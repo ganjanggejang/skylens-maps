@@ -40,10 +40,10 @@ describe('linkedBuildingRoutes', () => {
 
   it('links an airport cargo railway by address when its facility name differs and lies outside the building', () => {
     const airport = building()
-    airport.selection.properties.Name = 'Air Force Base'
+    airport.selection.properties.Name = 'Renamed cargo terminal'
     const train = route(0, 'Train', 0.005, 0)
-    const entries = [airport, point(0, 'BuildingCargoAirplane, BuildingCargoTrain', '공군기지', 0.004),
-      point(1, 'StopCargoTrain', '공군기지', 0.005), train]
+    const entries = [airport, point(0, 'BuildingCargoAirplane, BuildingCargoTrain', '테스트 화물 터미널', 0.004),
+      point(1, 'StopCargoTrain', '테스트 화물 터미널', 0.005), train]
     expect(linkedBuildingRoutes(airport, entries)).toEqual([train])
     entries[1].selection.properties.Address_Number = 20
     entries[2].selection.properties.Address_Number = 20

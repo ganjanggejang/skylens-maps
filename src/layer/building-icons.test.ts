@@ -5,13 +5,13 @@ import type { Feature, Polygon } from 'geojson'
 
 describe('important building icons', () => {
   it('recognizes venue keywords in building names regardless of case or asset', () => {
-    for (const Name of ['Ice Dome', 'CITY STADIUM', 'Bay Arena', 'Grand Coliseum']) {
+    for (const Name of ['Test Dome', 'TEST STADIUM', 'Test Arena', 'Test Coliseum']) {
       expect(buildingIcon({ Name, Category: 'Public, Park', Asset: 'Other asset' }, 100)).toBe('venue')
     }
     expect(buildingIcon({ Name: 'Concert Hall', Asset: 'Arena', Category: 'Public, Park' }, 100)).toBeNull()
     expect(buildingIcon({ Name: 'Arena wing', Category: 'Extension, Public, Park' }, 100)).toBeNull()
-    expect(buildingIcon({ Name: 'Spotify Santana Bay Arena', Category: 'Public, Transportation' }, 100)).toBeNull()
-    expect(buildingIcon({ Name: 'Bay Arena Ferry Terminal', Category: 'Public, Transportation' }, 100)).toBeNull()
+    expect(buildingIcon({ Name: 'Test Arena Station', Category: 'Public, Transportation' }, 100)).toBeNull()
+    expect(buildingIcon({ Name: 'Test Arena Ferry Terminal', Category: 'Public, Transportation' }, 100)).toBeNull()
     expect(buildingIcon({ Name: 'Stadium parking', Category: 'Public, Parking' }, 100)).toBeNull()
   })
   it('uses category tokens and excludes extensions and renamed transport facilities', () => {
@@ -22,7 +22,7 @@ describe('important building icons', () => {
     expect(buildingIcon({ Category: 'Public, Fire' }, 100)).toBeNull()
     expect(buildingIcon({ Category: 'Extension, Public, Police' }, 100)).toBeNull()
     expect(buildingIcon({ Category: 'Public, Transportation', Name: 'Art Museum', Asset: 'Ferry stop' }, 100)).toBeNull()
-    expect(buildingIcon({ Category: 'Public, Admin', Name: 'National Museum', Asset: 'Ventura City Hall' }, 100)).toBe('admin')
+    expect(buildingIcon({ Category: 'Public, Admin', Name: 'Test Museum', Asset: 'City Hall' }, 100)).toBe('admin')
   })
 
   it('recognizes tourism assets across categories and localized products', () => {
@@ -56,20 +56,20 @@ describe('important building icons', () => {
   })
 
   it('replaces generic hotel and restaurant zone names with brands while preserving custom names', () => {
-    const properties = { Name: '북미 스타일 고밀도 상업지', Zone: '북미 스타일 고밀도 상업지',
-      Category: 'Property', Zoning: 'Commercial', Employee: 83 }
+    const properties = { Name: '테스트 상업 구역', Zone: '테스트 상업 구역',
+      Category: 'Property', Zoning: 'Commercial', Employee: 80 }
     const feature = (extra: Record<string, unknown>): Feature<Polygon> => ({
       type: 'Feature', properties: { ...properties, ...extra },
       geometry: { type: 'Polygon', coordinates: [[[0, 0], [.001, 0], [.001, .001], [0, .001], [0, 0]]] },
     })
     const places = buildingPlaces({ type: 'FeatureCollection', features: [
-      feature({ Product: '식사', Asset: 'NA 고밀도 상업지구 01 - L5 4x4', Brand: 'NomSobaNoodle' }),
-      feature({ Product: '숙박 시설', Asset: 'NA 상업지구 호텔 01 - L5 6x6', Brand: 'BragAndRoost' }),
-      feature({ Name: 'My Hotel', Asset: 'Hotel', Brand: 'BragAndRoost' }),
+      feature({ Product: '식사', Asset: 'Restaurant asset', Brand: 'Test Restaurant Brand' }),
+      feature({ Product: '숙박 시설', Asset: 'Hotel asset', Brand: 'Test Hotel Brand' }),
+      feature({ Name: 'My Hotel', Asset: 'Hotel', Brand: 'Test Hotel Brand' }),
       feature({ Asset: 'Country Hotel', Brand: '' }),
     ] })
     expect(places.features.map(f => f.properties.label)).toEqual([
-      'NomSobaNoodle', 'BragAndRoost', 'My Hotel', 'Country Hotel',
+      'Test Restaurant Brand', 'Test Hotel Brand', 'My Hotel', 'Country Hotel',
     ])
   })
 })

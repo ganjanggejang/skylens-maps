@@ -16,13 +16,13 @@ describe('buildingPlaces', () => {
   it('promotes a named, rare, physically prominent property without promoting generic one-off assets', () => {
     const ordinary = Array.from({ length: 100 }, (_, index) =>
       building('Residential', 'Residential', `standard-${index}`, 'Property', index * .001 + .01))
-    const landmark = building('Brooklyn Tower', 'Residential', 'Brooklyn Tower', 'Property', 0,
+    const landmark = building('Test Landmark', 'Residential', 'Test Landmark', 'Property', 0,
       .001, 800)
     const places = buildingPlaces({ type: 'FeatureCollection', features: [landmark, ...ordinary] })
 
     expect(places.features).toHaveLength(1)
     expect(places.features[0].id).toBe(0)
-    expect(places.features[0].properties).toMatchObject({ label: 'Brooklyn Tower', tier: 0, icon: 'building-landmark' })
+    expect(places.features[0].properties).toMatchObject({ label: 'Test Landmark', tier: 0, icon: 'building-landmark' })
   })
 
   it('selects landmarks by city-relative size and occupancy, without name keywords', () => {
