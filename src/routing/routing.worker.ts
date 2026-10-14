@@ -1,24 +1,16 @@
 /// <reference lib="webworker" />
-import type { FeatureCollection, LineString, Point } from 'geojson'
+import type { FeatureCollection, LineString } from 'geojson'
 import { NetworkGraph } from './network'
 import { TransitPlanner } from './transit-planner'
 import { ROUTING_CONFIG } from './config'
-import type { RoutePlace } from './geometry'
+import type { RoutingRequest } from './worker-messages'
 
 let graph: NetworkGraph | null = null
 let transit: TransitPlanner | null = null
 let networkData: FeatureCollection<LineString> | null = null
 let datasetId = ''
 
-self.onmessage = (event: MessageEvent<
-  { type: 'init'; datasetId: string; configVersion: number; network: FeatureCollection<LineString> } |
-  { type: 'transit-data'; datasetId: string; configVersion: number;
-    pois: FeatureCollection<Point>; routes: FeatureCollection<LineString> } |
-  { type: 'route'; datasetId: string; configVersion: number; requestId: number;
-    origin: RoutePlace; destination: RoutePlace } |
-  { type: 'route-transit'; datasetId: string; configVersion: number; requestId: number;
-    origin: RoutePlace; destination: RoutePlace }
->) => {
+self.onmessage = (event: MessageEvent<RoutingRequest>) => {
   const message = event.data
   if (message.type === 'init') {
     if (message.configVersion !== ROUTING_CONFIG.version) return

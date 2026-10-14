@@ -1,28 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import type { LineString, Point, Polygon } from 'geojson'
-import type { SearchEntry } from './Search'
+import type { PlaceEntry } from '../data/place'
 import { linkedBuildingRoutes, matchingStationBuilding } from './building-routes'
 
 const address = { Address_District: 'Harbor', Address_Street: 'Quay Road', Address_Number: 10 }
 
-function entry(kind: SearchEntry['selection']['kind'], id: number, geometry: Point | LineString | Polygon,
-  properties: Record<string, unknown>): SearchEntry {
+function entry(kind: PlaceEntry['selection']['kind'], id: number, geometry: Point | LineString | Polygon,
+  properties: Record<string, unknown>): PlaceEntry {
   return { selection: { kind, id: `${kind}:${id}`, sourceFeatureId: id, properties }, geometry }
 }
 
-function building(): SearchEntry {
+function building(): PlaceEntry {
   return entry('building', 0, { type: 'Polygon', coordinates: [[
     [-0.00005, -0.00005], [0.00005, -0.00005], [0.00005, 0.00005],
     [-0.00005, 0.00005], [-0.00005, -0.00005],
   ]] }, { Name: 'Harbor terminal', Category: 'Public, Transportation', ...address })
 }
 
-function point(id: number, category: string, name: string, longitude: number, number = 10): SearchEntry {
+function point(id: number, category: string, name: string, longitude: number, number = 10): PlaceEntry {
   return entry('poi', id, { type: 'Point', coordinates: [longitude, 0] },
     { Name: name, Category: category, ...address, Address_Number: number })
 }
 
-function route(id: number, transport: string, longitude: number, offset: number): SearchEntry {
+function route(id: number, transport: string, longitude: number, offset: number): PlaceEntry {
   return entry('route', id, { type: 'LineString', coordinates: [
     [longitude - 0.001, offset], [longitude + 0.001, offset],
   ] }, { Name: `${transport} line ${id}`, Transport: transport, Stop: 1 })

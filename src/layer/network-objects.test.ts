@@ -3,7 +3,7 @@ import type { FeatureCollection, LineString } from 'geojson'
 import type { FilterSpecification, Map as MapLibreMap } from 'maplibre-gl'
 import { featureFilter } from '@maplibre/maplibre-gl-style-spec'
 import { addBaseLayers } from './layers'
-import { hasNetworkObject, prepareNetworkObjects } from './network-objects'
+import { prepareNetworkObjects } from './network-objects'
 
 function network(...objects: string[]): FeatureCollection<LineString> {
   return { type: 'FeatureCollection', features: objects.map(Object => ({
@@ -19,8 +19,6 @@ describe('Carto network Object labels', () => {
     expect(data.features.map(feature => feature.properties?._objectTypes)).toEqual([
       ['Road'], ['Road', 'Track'], ['Pathway', 'Road'], ['Pathway', 'Road', 'Track'],
     ])
-    expect(hasNetworkObject(data.features[3].properties?.Object, 'Road')).toBe(true)
-    expect(hasNetworkObject(data.features[1].properties?.Object, 'Pathway')).toBe(false)
   })
 
   it('renders combined Object labels in the matching base layers', () => {

@@ -1,5 +1,5 @@
 import type { FeatureCollection, LineString, Point } from 'geojson'
-import { routeMode, TRANSPORT, type TransportMode } from '../transport'
+import { routeMode, TRANSPORT, type TransportMode } from '../data/transport'
 import { distanceMeters, sliceLine, type Coordinate, type LinePosition } from './geometry'
 import { SegmentIndex, type IndexedPosition } from './spatial'
 

@@ -1,13 +1,8 @@
 import type { FilterSpecification, Map as MapLibreMap } from 'maplibre-gl'
 import type { Geometry } from 'geojson'
-import { routeMode, TRANSPORT } from './transport'
+import { routeMode, TRANSPORT } from '../data/transport'
 
-export type Selection = {
-  id: string
-  sourceFeatureId: number
-  kind: 'building' | 'road' | 'poi' | 'route'
-  properties: Record<string, unknown>
-}
+import type { Selection } from '../data/selection'
 
 const selectionFilter = (id: number): FilterSpecification => ['==', ['id'], id]
 

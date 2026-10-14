@@ -1,5 +1,5 @@
 import type { FeatureCollection, LineString } from 'geojson'
-import { hasNetworkObject } from '../network-objects'
+import { hasNetworkObject } from '../data/network-objects'
 import { ROUTING_CONFIG } from './config'
 import { lineCumulativeDistances, sliceLine,
   type Coordinate, type LinePosition } from './geometry'

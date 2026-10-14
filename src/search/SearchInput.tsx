@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react'
-import type { SearchEntry } from './search-model'
+import type { PlaceEntry } from '../data/place'
 import { normalizeSearch, searchAddress, searchEntries, searchEntryBrand, searchEntryKind, searchEntryLabel } from './search-model'
-import { useI18n } from './i18n'
+import { useI18n } from '../i18n'
 
 export function SearchInput({ id, label, query, entries, onChange, onSelect, onFocus, status, showResults = true }: {
-  id: string; label: string; query: string; entries: SearchEntry[]
-  onChange: (query: string) => void; onSelect: (entry: SearchEntry) => void
+  id: string; label: string; query: string; entries: PlaceEntry[]
+  onChange: (query: string) => void; onSelect: (entry: PlaceEntry) => void
   onFocus?: () => void; status?: string; showResults?: boolean
 }) {
   const { t, language, number } = useI18n()
   const [active, setActive] = useState(0)
   const results = useMemo(() => searchEntries(entries, query), [entries, query])
   const visible = results.slice(0, 100)
-  function choose(entry: SearchEntry) { onSelect(entry); setActive(0) }
+  function choose(entry: PlaceEntry) { onSelect(entry); setActive(0) }
   return <div className="search">
     <label htmlFor={id}>{label}</label>
     <input id={id} type="search" value={query} placeholder={t('searchPlaceholder')} autoComplete="off"

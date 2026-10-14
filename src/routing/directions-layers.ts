@@ -1,7 +1,7 @@
 import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
 import type { FeatureCollection, LineString, Point } from 'geojson'
-import { distanceMeters, type Coordinate } from './routing/geometry'
-import type { RouteResult, TransitJourney } from './routing/types'
+import { distanceMeters, type Coordinate } from './geometry'
+import type { RouteResult, TransitJourney } from './types'
 
 const emptyLines: FeatureCollection<LineString> = { type: 'FeatureCollection', features: [] }
 const emptyPoints: FeatureCollection<Point> = { type: 'FeatureCollection', features: [] }

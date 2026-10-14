@@ -40,11 +40,15 @@ Open <http://localhost:3000>. The `predev` script validates and copies the local
 
 ```powershell
 npm run typecheck
+npm run lint
+npm run check:deps
 npm run test
 npm run build
 ```
 
 `npm run build` also prepares development data. `npm run build:app` builds only the browser bundle for the mod. Building the C# mod requires the installed game and its official Modding Toolchain; the project is [mod/CityMap/CityMap.csproj](mod/CityMap/CityMap.csproj). The [implementation record](docs/implementation.md) describes the web app and data contracts, and the [mod release record](docs/mod_release_plan.md) describes the completed game integration and packaging.
+
+The [module boundary rules](docs/module-boundaries.md) describe allowed imports, runtime/type cycle checks, and worker entry checks. Dependency checks run without city export data and are included in the PR lint job.
 
 ## Contribute and report issues
 

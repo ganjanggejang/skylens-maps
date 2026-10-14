@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   web-lint:
-    name: Web ESLint
+    name: Web lint and dependency boundaries
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,7 +1,7 @@
 import type { FeatureCollection, Point } from 'geojson'
 import type { FilterSpecification, ImageSource, Map as MapLibreMap } from 'maplibre-gl'
-import { TRANSPORT, TRANSPORT_MODES, type TransportMode } from './transport'
-import { depotCategory, isStationMode, type StationMode } from './transport-stations'
+import { TRANSPORT, TRANSPORT_MODES, type TransportMode } from '../data/transport'
+import { depotCategory, isStationMode, type StationMode } from '../data/transport-stations'
 import type { BuildingPlaces } from './place-labels'
 
 export const GROUPS = {

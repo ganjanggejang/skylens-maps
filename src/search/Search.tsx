@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { SearchInput } from './SearchInput'
-import type { SearchEntry, SearchSourceState } from './search-model'
-import { useI18n } from './i18n'
-
-export type { SearchEntry, SearchSourceState } from './search-model'
-export { normalizeSearch, searchAddress, dedupeSearchEntries } from './search-model'
+import type { PlaceEntry } from '../data/place'
+import type { SearchSourceState } from './search-model'
+import { useI18n } from '../i18n'
 
 export function Search({ entries, optionalStates, onActivate, onDeactivate, onSelect }: {
-  entries: SearchEntry[]
+  entries: PlaceEntry[]
   optionalStates: { poi: SearchSourceState; route: SearchSourceState }
   onActivate: () => void
   onDeactivate?: () => void
-  onSelect: (entry: SearchEntry) => void
+  onSelect: (entry: PlaceEntry) => void
 }) {
   const { t } = useI18n()
   const [query, setQuery] = useState('')

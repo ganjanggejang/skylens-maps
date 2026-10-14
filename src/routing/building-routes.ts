@@ -1,8 +1,8 @@
 import type { Feature, Point, Position } from 'geojson'
-import type { SearchEntry } from './Search'
-import { normalizeText, propertyText } from './building-name'
+import type { PlaceEntry } from '../data/place'
+import { normalizeText, propertyText } from '../data/building-name'
 import { nearbyStops } from './route-stops'
-import { poiModes, routeMode, type TransportMode } from './transport'
+import { poiModes, routeMode, type TransportMode } from '../data/transport'
 
 const FACILITY_DISTANCE_METERS = 25
 const STOP_DISTANCE_METERS = 80
@@ -41,7 +41,7 @@ function sameNameAndAddress(a: Record<string, unknown>, b: Record<string, unknow
     normalizeText(propertyText(a, 'Name')) === normalizeText(propertyText(b, 'Name'))
 }
 
-export function matchingStationBuilding(station: Feature<Point>, entries: SearchEntry[]): SearchEntry | undefined {
+export function matchingStationBuilding(station: Feature<Point>, entries: PlaceEntry[]): PlaceEntry | undefined {
   const properties = station.properties ?? {}
   const candidates = entries.filter(entry => entry.selection.kind === 'building' &&
     propertyText(entry.selection.properties, 'Category') === 'Public, Transportation' &&
@@ -51,18 +51,18 @@ export function matchingStationBuilding(station: Feature<Point>, entries: Search
   return named.length === 1 ? named[0] : undefined
 }
 
-function isStop(entry: SearchEntry): boolean {
+function isStop(entry: PlaceEntry): boolean {
   return entry.selection.kind === 'poi' &&
     typeof entry.selection.properties.Category === 'string' &&
     entry.selection.properties.Category.split(',').some(token => token.trim().startsWith('Stop'))
 }
 
-export function linkedBuildingRoutes(building: SearchEntry, entries: SearchEntry[]): SearchEntry[] {
+export function linkedBuildingRoutes(building: PlaceEntry, entries: PlaceEntry[]): PlaceEntry[] {
   if (building.selection.kind !== 'building' || building.geometry.type !== 'Polygon' ||
       propertyText(building.selection.properties, 'Category') !== 'Public, Transportation') return []
   const rings = building.geometry.coordinates
   const modes = new Set<TransportMode>()
-  const facilities: SearchEntry[] = []
+  const facilities: PlaceEntry[] = []
   for (const entry of entries) {
     if (entry.selection.kind !== 'poi' || entry.geometry.type !== 'Point' || isStop(entry)) continue
     const category = propertyText(entry.selection.properties, 'Category')
@@ -89,7 +89,7 @@ export function linkedBuildingRoutes(building: SearchEntry, entries: SearchEntry
   })
   const stopIds = new Set(buildingStops.map(entry => entry.selection.id))
   if (!stopIds.size) return []
-  const routes: SearchEntry[] = []
+  const routes: PlaceEntry[] = []
   for (const entry of entries) {
     if (entry.selection.kind !== 'route' || entry.geometry.type !== 'LineString') continue
     const mode = routeMode(entry.selection.properties.Transport)

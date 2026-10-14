@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { GROUPS, TOGGLEABLE_GROUPS, type GroupId, type Visibility } from './layers'
-import type { Counts, SourceStates } from './Sidebar'
-import { useI18n, localizeKnownError } from './i18n'
+import type { SourceStates } from '../data/types'
+import type { Counts } from './types'
+import { useI18n, localizeKnownError } from '../i18n'
 
 type LayerMenu = 'map' | 'transport'
 type Props = {
