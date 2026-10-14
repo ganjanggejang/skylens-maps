@@ -86,7 +86,6 @@ module.exports = {
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {
       extensions: ['.js', '.ts', '.tsx', '.mjs', '.cjs', '.d.ts', '.json'],
-      modules: ['node_modules', 'node_modules/@types'],
       mainFields: ['types', 'typings', 'module', 'main'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
     },

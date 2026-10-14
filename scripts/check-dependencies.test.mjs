@@ -220,3 +220,12 @@ it('returns zero from the CLI for a valid fixture', async () => {
   expect(result.status).toBe(0)
   expect(result.stdout).toContain('0 errors, 0 warnings')
 })
+
+it('accepts the shared config in the native dependency-cruiser DOT CLI', () => {
+  const result = spawnSync(process.execPath,
+    [resolve(projectRoot, 'node_modules/dependency-cruiser/bin/dependency-cruiser.mjs'),
+      'src', '--include-only', '^src', '--config', '.dependency-cruiser.cjs', '--output-type', 'dot'],
+    { cwd: projectRoot, encoding: 'utf8' })
+  expect(result.status, result.stderr).toBe(0)
+  expect(result.stdout).toMatch(/\bdigraph\b/)
+})
