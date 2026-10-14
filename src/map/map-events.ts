@@ -7,6 +7,16 @@ import { STATION_MODES } from '../data/transport-stations'
 
 export function installMapEvents(map: MapLibreMap, lookup: Map<string, Selection>, getEntries: () => PlaceEntry[],
   onSelect: (selection: Selection | null, geometry?: Geometry) => void) {
+  let hovered: { source: string; id: string | number } | null = null
+  const clearHover = () => {
+    if (hovered) map.setFeatureState(hovered, { hover: false })
+    hovered = null
+  }
+  map.on('mouseout', () => {
+    clearHover()
+    map.getCanvas().style.cursor = ''
+  })
+  map.on('movestart', clearHover)
   map.on('click', event => {
     const radius = 6
     const point = event.point
@@ -36,6 +46,18 @@ export function installMapEvents(map: MapLibreMap, lookup: Map<string, Selection
   })
   map.on('mousemove', event => {
     const point = event.point
+    const hoverLayers = ['place-building-label', 'place-subway-label',
+      ...TRANSPORT_MODES.map(mode => `transport-${mode}-poi`),
+      ...STATION_MODES.map(mode => `transport-${mode}-depot`)]
+      .filter(id => map.getLayer(id))
+    const hit = !map.isMoving() && hoverLayers.length ?
+      map.queryRenderedFeatures(point, { layers: hoverLayers })[0] : undefined
+    const next = hit?.id === undefined ? null : { source: hit.source, id: hit.id }
+    if (next?.source !== hovered?.source || next?.id !== hovered?.id) {
+      clearHover()
+      hovered = next
+      if (hovered) map.setFeatureState(hovered, { hover: true })
+    }
     const building = map.queryRenderedFeatures(point,
       { layers: ['place-building-label', 'building-fill'] }).length > 0
     const transportLayers = [...TRANSPORT_MODES.flatMap(mode => [`transport-${mode}-poi`, `transport-${mode}-route`]),

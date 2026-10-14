@@ -1,4 +1,5 @@
 import { normalizeText, propertyText } from '../data/building-name'
+import { hoverColor } from './hover-color'
 
 export type BuildingIcon = 'school' | 'police' | 'hospital' | 'admin' | 'museum' | 'hotel' | 'restaurant' | 'venue' | 'landmark'
 
@@ -65,22 +66,25 @@ const ICON_PATHS: Record<BuildingIcon, string> = {
 export function registerBuildingIcons(map: { addImage: (id: string, image: ImageData,
   options: { pixelRatio: number }) => unknown }) {
   for (const [kind, path] of Object.entries(ICON_PATHS)) {
-    const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = 48
-    const context = canvas.getContext('2d')
-    if (!context) throw new Error(`Could not draw ${kind} building icon`)
-    context.scale(2, 2)
-    context.fillStyle = BUILDING_ICON_COLORS[kind as BuildingIcon]
-    context.beginPath()
-    context.arc(12, 12, 11, 0, Math.PI * 2)
-    context.fill()
-    context.strokeStyle = '#fffdf9'
-    context.lineWidth = 1.2
-    context.stroke()
-    context.lineWidth = 1.4
-    context.lineCap = 'round'
-    context.lineJoin = 'round'
-    context.stroke(new Path2D(path))
-    map.addImage(`building-${kind}`, context.getImageData(0, 0, 48, 48), { pixelRatio: 2 })
+    const baseColor = BUILDING_ICON_COLORS[kind as BuildingIcon]
+    for (const [suffix, color] of [['', baseColor], ['-hover', hoverColor(baseColor)]]) {
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 48
+      const context = canvas.getContext('2d')
+      if (!context) throw new Error(`Could not draw ${kind} building icon`)
+      context.scale(2, 2)
+      context.fillStyle = color
+      context.beginPath()
+      context.arc(12, 12, 11, 0, Math.PI * 2)
+      context.fill()
+      context.strokeStyle = '#fffdf9'
+      context.lineWidth = 1.2
+      context.stroke()
+      context.lineWidth = 1.4
+      context.lineCap = 'round'
+      context.lineJoin = 'round'
+      context.stroke(new Path2D(path))
+      map.addImage(`building-${kind}${suffix}`, context.getImageData(0, 0, 48, 48), { pixelRatio: 2 })
+    }
   }
 }
