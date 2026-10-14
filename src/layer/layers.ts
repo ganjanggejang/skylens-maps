@@ -69,12 +69,17 @@ export function addWaterLayer(map: MapLibreMap, coordinates: [[number, number], 
 
 export function addBaseLayers(map: MapLibreMap) {
   map.addLayer({
+    id: 'park-fill', type: 'fill', source: 'parks',
+    paint: { 'fill-color': '#c8e6bc', 'fill-opacity': 1 },
+  })
+  map.addLayer({
     id: 'building-fill', type: 'fill', source: 'buildings',
-    paint: { 'fill-color': '#ede0d8', 'fill-opacity': 0.9 },
+    paint: { 'fill-color': '#ede0d8', 'fill-opacity': ['case', ['==', ['get', '_isPark'], true], 0, 0.9] },
   })
   map.addLayer({
     id: 'building-outline', type: 'line', source: 'buildings',
-    paint: { 'line-color': '#c0a699', 'line-width': 1 },
+    paint: { 'line-color': '#c0a699', 'line-width': 1,
+      'line-opacity': ['case', ['==', ['get', '_isPark'], true], 0, 1] },
   })
 
   map.addLayer({

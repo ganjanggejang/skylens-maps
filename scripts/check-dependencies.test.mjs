@@ -40,6 +40,8 @@ it('allows shared data types and UI composition, including Vite worker URLs', as
   const result = await inspect({
     'src/data/types.ts': 'export type SourceState = { state: string }',
     'src/data/place.ts': 'export type PlaceEntry = { id: string }',
+    'src/data/parks.worker.ts': "export type { PlaceEntry } from './place'",
+    'src/data/park-worker-client.ts': "export const worker = new Worker(new URL('./parks.worker.ts', import.meta.url))",
     'src/data/useCityDataset.ts': "import { useState } from 'react'; export const useCityDataset = () => useState(null)",
     'src/i18n.tsx': "import { createContext } from 'react'; export const context = createContext(null); export type Language = 'en'",
     'src/layer/LayerControls.tsx': "import type { SourceState } from '../data/types'; export type Props = SourceState",

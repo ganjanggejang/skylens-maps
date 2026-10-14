@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Map as MapLibreMap } from 'maplibre-gl'
+import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl'
+import { inferParkAreas } from '../data/park-worker-client'
 import type { Selection } from '../data/selection'
 import type { PlaceEntry } from '../data/place'
 import { useCityDataset } from '../data/useCityDataset'
@@ -32,6 +33,7 @@ export function useCityMap(routing: RoutingLifecycle) {
   useEffect(() => {
     const loader = createLoader()
     let scene: CityMap | null = null
+    let cancelParks = () => {}
 
     async function start() {
       try {
@@ -85,6 +87,9 @@ export function useCityMap(routing: RoutingLifecycle) {
         runtimeRef.current = { scene: current, controls, loadSearchSources, loadArea }
         setMap(current.map)
         setStatus('ready')
+        cancelParks = inferParkAreas(dataset.buildings, dataset.network, parks => {
+          if (loader.active) current.map.getSource<GeoJSONSource>('parks')?.setData(parks)
+        })
         if (dataset.extraInfo.water.coordinates) {
           void loader.loadWater(current.installWater).catch(() => {})
         }
@@ -100,6 +105,7 @@ export function useCityMap(routing: RoutingLifecycle) {
     void start()
     return () => {
       loader.dispose()
+      cancelParks()
       runtimeRef.current = null
       scene?.dispose()
       routing.disposeRouting()

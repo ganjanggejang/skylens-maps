@@ -55,6 +55,7 @@ export function createCityMap(container: HTMLDivElement, data: ReturnType<typeof
       try {
         map.addSource('buildings', { type: 'geojson', data: buildings })
         map.addSource('network', { type: 'geojson', data: network })
+        map.addSource('parks', { type: 'geojson', data: data.parks })
         addBaseLayers(map)
         addBuildingPlaceLayer(map, places)
         for (const id of GROUP_ORDER) setGroupVisibility(map, id, visibility[id])
