@@ -17,6 +17,11 @@ export default defineConfig([
     },
   },
   {
+    files: ['scripts/check-dependencies*.mjs', '.dependency-cruiser.cjs'],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['src/**/*.tsx'],
     extends: [react.configs.flat.recommended, react.configs.flat['jsx-runtime'], reactHooks.configs.flat.recommended],
     settings: { react: { version: 'detect' } },
