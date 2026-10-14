@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { FeatureCollection, LineString } from 'geojson'
 import { NetworkGraph } from './network'
 
-function network(...features: Array<{ line: number[][]; object?: string; category?: string; direction?: string }>): FeatureCollection<LineString> {
+function network(
+  ...features: Array<{ line: number[][]; object?: string; category?: string; direction?: string }>
+): FeatureCollection<LineString> {
   return { type: 'FeatureCollection', features: features.map(({ line, object = 'Road', category = 'Small', direction = 'Both' }) => ({
     type: 'Feature', geometry: { type: 'LineString', coordinates: line },
     properties: { Object: object, Category: category, Direction: direction, Limit: 40 },

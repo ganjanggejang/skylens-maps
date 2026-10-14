@@ -126,7 +126,12 @@ export type TranslationKey = keyof typeof ko
 const messages = { ko, en }
 const STORAGE_KEY = 'cities-maps-language'
 
-type I18n = { language: Language; setLanguage: (language: Language) => void; t: (key: TranslationKey, values?: Record<string, string | number>) => string; number: (value: number) => string }
+type I18n = {
+  language: Language
+  setLanguage: (language: Language) => void
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string
+  number: (value: number) => string
+}
 const Context = createContext<I18n | null>(null)
 
 function initialLanguage(): Language {

@@ -9,7 +9,8 @@ import { showSelection } from '../layer/interaction'
 import { fit, geometryBounds } from './camera'
 import type { CityMap } from './createCityMap'
 
-export function createMapControls(scene: CityMap, onSelection: (next: Selection | null, returnId: string | null) => void,
+export function createMapControls(scene: CityMap,
+  onSelection: (next: Selection | null, returnId: string | null) => void,
   onVisibility: (visibility: Visibility) => void, onReveal: () => void) {
   const { map } = scene
   let selection: Selection | null = null
@@ -60,7 +61,6 @@ export function createMapControls(scene: CityMap, onSelection: (next: Selection 
         stopIds: nearbyStops(route, scene.entries).map(stop => stop.selection.sourceFeatureId) }] : []
     }) } : null)
   }
-
 
   function selectFeature(next: Selection | null, geometry?: Geometry) {
     returnBuildingId = null

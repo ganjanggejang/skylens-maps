@@ -71,7 +71,9 @@ export function installMapEvents(map: MapLibreMap, lookup: Map<string, Selection
       ...STATION_MODES.map(mode => `transport-${mode}-depot`),
       'place-subway-label'].filter(id => map.getLayer(id))
     const transportRouteLayers = TRANSPORT_MODES.map(mode => `transport-${mode}-route`).filter(id => map.getLayer(id))
-    const poi = transportPoiLayers.length ? map.queryRenderedFeatures(event.point, { layers: transportPoiLayers })[0] : undefined
+    const poi = transportPoiLayers.length
+      ? map.queryRenderedFeatures(event.point, { layers: transportPoiLayers })[0]
+      : undefined
     const poiIsFacility = !poi?.layer.id.startsWith('place-') && typeof poi?.properties?.Category === 'string' &&
       poi.properties.Category.split(',').some((token: string) => /^(Building|Depot)/.test(token.trim()))
     const route = !poi && transportRouteLayers.length ? map.queryRenderedFeatures(

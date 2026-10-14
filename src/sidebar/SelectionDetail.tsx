@@ -49,7 +49,8 @@ function uniqueRouteStops(stops: PlaceEntry[]): PlaceEntry[] {
   })
 }
 
-export function SelectionDetail({ selection, routeStops, buildingRoutes, poiState, routeState, onClose, onBack, onStopFocus, onBuildingRouteSelect,
+export function SelectionDetail({ selection, routeStops, buildingRoutes, poiState, routeState,
+  onClose, onBack, onStopFocus, onBuildingRouteSelect,
   onDirectionsPlace }: {
     selection: Selection; routeStops: PlaceEntry[]; buildingRoutes: PlaceEntry[];
     poiState: SourceState['state']; routeState: SourceState['state']; onClose: () => void
@@ -122,4 +123,3 @@ export function SelectionDetail({ selection, routeStops, buildingRoutes, poiStat
     <small className="detail-id">{t('internalId', { id })}</small>
   </section>
 }
-

@@ -62,7 +62,8 @@ describe('linkedBuildingRoutes', () => {
     const ship = route(0, 'Ship', 0.005, 0.0007)
     const entries = [terminal, point(0, 'BuildingCargoShip', 'Harbor terminal', 0),
       point(1, 'StopCargoShip', 'Cargo berth', 0.005), ship]
-    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id)).toEqual([ship.selection.id])
+    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id))
+      .toEqual([ship.selection.id])
   })
 
   it('links a ferry route when the stop has another name and lies offshore', () => {
@@ -70,14 +71,16 @@ describe('linkedBuildingRoutes', () => {
     const ferry = route(0, 'Ferry', 0.0009, 0.0006)
     const entries = [terminal, point(0, 'BuildingFerry', 'Harbor terminal', 0),
       point(1, 'StopFerry', 'Quay stop', 0.0009), ferry]
-    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id)).toEqual([ferry.selection.id])
+    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id))
+      .toEqual([ferry.selection.id])
   })
 
   it('links a ferry terminal with a named stop but no facility POI', () => {
     const terminal = building()
     const ferry = route(0, 'Ferry', 0.0009, 0.0006)
     const entries = [terminal, point(0, 'StopFerry', 'Harbor terminal', 0.0009), ferry]
-    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id)).toEqual([ferry.selection.id])
+    expect(linkedBuildingRoutes(terminal, entries).map(candidate => candidate.selection.id))
+      .toEqual([ferry.selection.id])
   })
 
   it('does not link a nearby route through a stop at a different address', () => {

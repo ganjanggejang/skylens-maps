@@ -26,13 +26,14 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
   // Keep editable input text in sync when a place or the display language changes.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (origin) setOriginQuery(searchEntryLabel(origin.entry, language)) }, [origin, language])
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (destination) setDestinationQuery(searchEntryLabel(destination.entry, language)) }, [destination, language])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (destination) setDestinationQuery(searchEntryLabel(destination.entry, language))
+  }, [destination, language])
   const places = entries.filter(entry => entry.selection.kind !== 'route')
   function select(entry: PlaceEntry, side: 'origin' | 'destination') {
     const place = { entry, label: searchEntryLabel(entry, language) }
-    if (side === 'origin') { setOriginQuery(place.label); onOrigin(place) }
-    else { setDestinationQuery(place.label); onDestination(place) }
+    if (side === 'origin') { setOriginQuery(place.label); onOrigin(place) } else { setDestinationQuery(place.label); onDestination(place) }
   }
   function swap() {
     setOriginQuery(destination ? searchEntryLabel(destination.entry, language) : '')
@@ -47,7 +48,8 @@ export function Directions({ entries, origin, destination, outcome, transitOutco
       onChange={query => { setOriginQuery(query); onOrigin(null) }} onSelect={entry => select(entry, 'origin')} />
     <button type="button" className="directions-swap" onClick={swap} aria-label={t('swapAria')}>{t('swap')}</button>
     <SearchInput id="directions-destination" label={t('destination')} query={destinationQuery} entries={places}
-      showResults={!destination || destinationQuery !== searchEntryLabel(destination.entry, language)} onFocus={onActivate}
+      showResults={!destination || destinationQuery !== searchEntryLabel(destination.entry, language)}
+      onFocus={onActivate}
       onChange={query => { setDestinationQuery(query); onDestination(null) }} onSelect={entry => select(entry, 'destination')} />
     {same && <p className="directions-error" role="status">{t('samePlace')}</p>}
     {error && <p className="directions-error" role="alert">{localizeKnownError(error, t)}</p>}

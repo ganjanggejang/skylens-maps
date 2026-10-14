@@ -49,7 +49,9 @@ function bestOccurrence(positions: IndexedPosition[], total: number, closed: boo
   return { positions: [choices[0]], ambiguous: alternatives.length > 1 }
 }
 
-export function buildTransitData(pois: FeatureCollection<Point>, routeFeatures: FeatureCollection<LineString>): TransitData {
+export function buildTransitData(
+  pois: FeatureCollection<Point>, routeFeatures: FeatureCollection<LineString>,
+): TransitData {
   const stops: PassengerStop[] = pois.features.flatMap((feature, sourceId) => {
     const mode = stopMode(feature.properties?.Category)
     if (!mode || feature.geometry?.type !== 'Point') return []

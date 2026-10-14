@@ -4,4 +4,3 @@ export type Selection = {
   kind: 'building' | 'road' | 'poi' | 'route'
   properties: Record<string, unknown>
 }
-
