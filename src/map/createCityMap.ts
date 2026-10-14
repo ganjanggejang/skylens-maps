@@ -37,6 +37,7 @@ export function createCityMap(container: HTMLDivElement, data: ReturnType<typeof
       layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e8ece8' } }] },
     center: [0, 0], zoom: 10, pitch: 0, maxPitch: 0,
     dragRotate: false, renderWorldCopies: false, attributionControl: false,
+    crossSourceCollisions: true,
   })
   map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
   map.on('resize', () => constrainMap(map, all))
@@ -59,6 +60,7 @@ export function createCityMap(container: HTMLDivElement, data: ReturnType<typeof
         for (const id of GROUP_ORDER) setGroupVisibility(map, id, visibility[id])
         addSelectionLayers(map)
         addDirectionsLayers(map)
+        map.moveLayer('place-building-label')
         installMapEvents(map, lookup, () => entries, onSelect)
         constrainMap(map, all)
         overviewZoom = map.cameraForBounds(city, { padding: fitPadding(), maxZoom: 15 })?.zoom ?? 12

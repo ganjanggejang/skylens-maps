@@ -2,6 +2,18 @@ import { normalizeText, propertyText } from '../data/building-name'
 
 export type BuildingIcon = 'school' | 'police' | 'hospital' | 'admin' | 'museum' | 'hotel' | 'restaurant' | 'venue' | 'landmark'
 
+export const BUILDING_ICON_COLORS: Record<BuildingIcon, string> = {
+  landmark: '#ff6a00',
+  venue: '#a600ff',
+  hospital: '#ff006e',
+  school: '#555b63',
+  police: '#555b63',
+  admin: '#555b63',
+  museum: '#b45309',
+  hotel: '#b45309',
+  restaurant: '#b45309',
+}
+
 // Explicit asset aliases take precedence over broad keyword matching.
 const ASSET_ICONS: Record<string, BuildingIcon> = {
   '해양 박물관': 'museum', '현대 미술관': 'museum',
@@ -58,8 +70,7 @@ export function registerBuildingIcons(map: { addImage: (id: string, image: Image
     const context = canvas.getContext('2d')
     if (!context) throw new Error(`Could not draw ${kind} building icon`)
     context.scale(2, 2)
-    context.fillStyle = kind === 'landmark' ? '#b58524' : kind === 'venue' ? '#8055ad' : kind === 'hospital' ? '#d85c78' :
-      ['museum', 'hotel', 'restaurant'].includes(kind) ? '#90623b' : '#426e60'
+    context.fillStyle = BUILDING_ICON_COLORS[kind as BuildingIcon]
     context.beginPath()
     context.arc(12, 12, 11, 0, Math.PI * 2)
     context.fill()

@@ -165,7 +165,9 @@ export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) 
   map.addLayer({
     id: 'place-building-label', type: 'symbol', source: 'building-places',
     filter: ['==', ['get', 'tier'], 0],
-    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': true, 'text-optional': false,
+    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': false, 'text-optional': false,
+      'icon-allow-overlap': false, 'text-allow-overlap': false,
+      'icon-ignore-placement': false, 'text-ignore-placement': false,
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
       'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
@@ -175,7 +177,7 @@ export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) 
       'text-max-width': 11,
       'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
       'symbol-sort-key': ['get', 'sortKey'] },
-    paint: { 'text-color': '#34513f', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+    paint: { 'text-color': ['get', 'color'], 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   })
 }
 
@@ -189,14 +191,18 @@ export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
   map.addLayer({
     id: 'place-subway-label', type: 'symbol', source: 'subway-stations',
     minzoom: Math.max(0, overviewZoom - 0.6),
-    layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': true,
-      'icon-optional': true, 'text-optional': true,
+    layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': false,
+      'text-allow-overlap': false, 'icon-ignore-placement': false, 'text-ignore-placement': false,
+      'icon-optional': false, 'text-optional': false,
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
       'text-field': ['get', '_mapLabel'], 'text-font': ['Segoe UI'],
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
       'text-variable-anchor': ['top', 'bottom', 'left', 'right'], 'text-radial-offset': 1.2,
-      'text-max-width': 10, 'text-padding': 5, 'symbol-sort-key': ['get', '_labelSortKey'] },
-    paint: { 'text-color': '#2b5b9c', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+      'text-max-width': 10,
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
+      'symbol-sort-key': ['get', '_labelSortKey'] },
+    paint: { 'text-color': TRANSPORT.subway.color, 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   }, 'selected-route')
 }
 
@@ -270,7 +276,9 @@ export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: F
   map.addSource(`${mode}-stations`, { type: 'geojson', data: stations })
   map.addLayer({
     id: `transport-${mode}-poi`, type: 'symbol', source: `${mode}-stations`,
-    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': true,
+    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': false,
+      'icon-ignore-placement': false,
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
   }, 'selected-route')
 }
@@ -278,10 +286,9 @@ export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: F
 export function setGroupVisibility(map: MapLibreMap, id: GroupId, visible: boolean) {
   const next = ALWAYS_VISIBLE.has(id) ? true : visible
   for (const layerId of GROUPS[id].layers) {
-    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', next ? 'visible' : 'none')
-  }
-  if (id === 'subway' && map.getLayer('place-subway-label')) {
-    map.setLayoutProperty('place-subway-label', 'icon-image', next ? '' : 'subway-station')
+    // Subway station icons stay with their names in place-subway-label, including when routes are shown.
+    const layerVisible = next && layerId !== 'transport-subway-poi'
+    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', layerVisible ? 'visible' : 'none')
   }
 }
 
