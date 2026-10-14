@@ -29,6 +29,34 @@ function route(id: number, transport: string, longitude: number, offset: number)
 }
 
 describe('linkedBuildingRoutes', () => {
+  it('links train routes for a station with both parking and transportation categories', () => {
+    const station = building()
+    station.selection.properties.Category = 'Public, Parking, Transportation'
+    const train = route(0, 'Train', 0, 0)
+    const entries = [station, point(0, 'BuildingPassengerTrain', 'Harbor terminal', 0),
+      point(1, 'StopPassengerTrain', 'Platform', 0), train]
+    expect(linkedBuildingRoutes(station, entries)).toEqual([train])
+  })
+
+  it('links an airport cargo railway by address when its facility name differs and lies outside the building', () => {
+    const airport = building()
+    airport.selection.properties.Name = 'Air Force Base'
+    const train = route(0, 'Train', 0.005, 0)
+    const entries = [airport, point(0, 'BuildingCargoAirplane, BuildingCargoTrain', '공군기지', 0.004),
+      point(1, 'StopCargoTrain', '공군기지', 0.005), train]
+    expect(linkedBuildingRoutes(airport, entries)).toEqual([train])
+    entries[1].selection.properties.Address_Number = 20
+    entries[2].selection.properties.Address_Number = 20
+    expect(linkedBuildingRoutes(airport, entries)).toEqual([])
+  })
+
+  it('links a renamed station through an addressed stop even without a facility POI', () => {
+    const station = building()
+    const train = route(0, 'Train', 0.005, 0)
+    const entries = [station, point(0, 'StopPassengerTrain', 'Old station name', 0.005), train]
+    expect(linkedBuildingRoutes(station, entries)).toEqual([train])
+  })
+
   it('links a ship route to berths far from its terminal building', () => {
     const terminal = building()
     const ship = route(0, 'Ship', 0.005, 0.0007)
@@ -62,6 +90,14 @@ describe('linkedBuildingRoutes', () => {
 })
 
 describe('matchingStationBuilding', () => {
+  it('recognizes a station with additional public building categories', () => {
+    const terminal = building()
+    terminal.selection.properties.Category = 'Transportation, Public, Parking'
+    const station = { type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [0, 0] }, properties: { ...address } }
+    expect(matchingStationBuilding(station, [terminal])).toBe(terminal)
+  })
+
   it('selects the station building by address even when the icon lies outside it and has another name', () => {
     const terminal = building()
     const unrelated = entry('building', 1, terminal.geometry,

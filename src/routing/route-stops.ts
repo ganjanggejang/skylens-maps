@@ -1,4 +1,5 @@
 import type { PlaceEntry } from '../data/place'
+import { normalizeText, propertyText } from '../data/building-name'
 import { poiModes, routeMode } from '../data/transport'
 import { distanceMeters, projectOnLine, projectPoint, type Coordinate, type LinePosition } from './geometry'
 
@@ -58,18 +59,32 @@ export function nearbyStops(route: PlaceEntry, entries: PlaceEntry[]): PlaceEntr
   const projectNearby = nearbyProjector(line, maxDistance)
   const count = route.selection.properties.Stop
   const limit = typeof count === 'number' && Number.isInteger(count) && count > 0 ? count : Infinity
+  const railStopCategory = mode === 'train' ?
+    route.selection.properties.Object === 'RouteCargo' ? 'StopCargoTrain' :
+      route.selection.properties.Object === 'RoutePassenger' ? 'StopPassengerTrain' : null : null
   const candidates = entries.flatMap(entry => {
     if (entry.selection.kind !== 'poi' || entry.geometry.type !== 'Point' ||
         typeof entry.selection.properties.Category !== 'string' ||
         !entry.selection.properties.Category.split(',').some(token => token.trim().startsWith('Stop')) ||
         !poiModes(entry.selection.properties.Category).includes(mode)) return []
+    if (railStopCategory && !entry.selection.properties.Category.split(',').some(token => token.trim() === railStopCategory)) return []
     const position = projectNearby(entry.geometry.coordinates as Coordinate)
     return position ? [{ entry, ...position }] : []
   })
-  const stops = candidates
-    .filter(entry => entry.distance <= maxDistance)
-    .sort((a, b) => a.distance - b.distance || a.entry.selection.sourceFeatureId - b.entry.selection.sourceFeatureId)
-    .slice(0, limit)
+  candidates.sort((a, b) => a.distance - b.distance || a.entry.selection.sourceFeatureId - b.entry.selection.sourceFeatureId)
+  const stations = new Map<string, typeof candidates>()
+  for (const candidate of candidates) {
+    const properties = candidate.entry.selection.properties
+    const address = ['Address_District', 'Address_Street', 'Address_Number']
+      .map(field => normalizeText(propertyText(properties, field)))
+    // Rail exports count stations, while each platform has its own stop marker.
+    const key = mode === 'train' && address.every(Boolean) ?
+      JSON.stringify([properties.Category, ...address]) : candidate.entry.selection.id
+    const members = stations.get(key)
+    if (members) members.push(candidate)
+    else stations.set(key, [candidate])
+  }
+  const stops = [...stations.values()].slice(0, limit).flat()
     .sort((a, b) => a.progress - b.progress || a.distance - b.distance)
     .map(candidate => candidate.entry)
   cached.set(route, stops)

@@ -157,7 +157,7 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
         filter: ['==', ['get', '_transportMode'], mode],
         layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
         paint: { 'line-color': ['coalesce', ['get', 'Color'], group.color],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 9, 2, 15, 5],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 15, 3.5],
           'line-opacity': 0.9 },
       }, map.getLayer('transport-bus-poi') ? 'transport-bus-poi' : 'selected-building-fill')
     }
@@ -218,12 +218,13 @@ export function setBuildingPlaceTier(map: MapLibreMap, tier: number) {
 }
 
 export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
+  // Place subway symbols above building labels so they win collision placement.
   map.addLayer({
     id: 'place-subway-label', type: 'symbol', source: 'subway-stations',
-    minzoom: Math.max(0, overviewZoom - 0.6),
+    minzoom: Math.max(0, overviewZoom - 1.6),
     layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': false,
       'text-allow-overlap': false, 'icon-ignore-placement': false, 'text-ignore-placement': false,
-      'icon-optional': false, 'text-optional': false,
+      'icon-optional': false, 'text-optional': true,
       'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
       'text-field': ['get', '_mapLabel'], 'text-font': ['Segoe UI'],
@@ -238,7 +239,7 @@ export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
       'text-color-transition': PRESS_TRANSITION,
       'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 },
       'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
-  }, 'selected-route')
+  })
   addHoverIconLayer(map, 'place-subway-hover', 'subway-stations', 'subway-station-hover')
   addHoverIconLayer(map, 'place-subway-pressed', 'subway-stations', 'subway-station-pressed', true)
 }
@@ -315,8 +316,9 @@ export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: F
   map.addSource(`${mode}-stations`, { type: 'geojson', data: stations })
   map.addLayer({
     id: `transport-${mode}-poi`, type: 'symbol', source: `${mode}-stations`,
-    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': false,
-      'icon-ignore-placement': false,
+    // Rail stations can share an interchange with permanent subway labels.
+    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': mode === 'train',
+      'icon-ignore-placement': mode === 'train',
       'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
     paint: { 'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 } },

@@ -2,7 +2,7 @@ import type { Feature, Point, Position } from 'geojson'
 import type { PlaceEntry } from '../data/place'
 import { normalizeText, propertyText } from '../data/building-name'
 import { nearbyStops } from './route-stops'
-import { poiModes, routeMode, type TransportMode } from '../data/transport'
+import { isTransportBuilding, poiModes, routeMode, type TransportMode } from '../data/transport'
 
 const FACILITY_DISTANCE_METERS = 25
 const STOP_DISTANCE_METERS = 80
@@ -44,7 +44,7 @@ function sameNameAndAddress(a: Record<string, unknown>, b: Record<string, unknow
 export function matchingStationBuilding(station: Feature<Point>, entries: PlaceEntry[]): PlaceEntry | undefined {
   const properties = station.properties ?? {}
   const candidates = entries.filter(entry => entry.selection.kind === 'building' &&
-    propertyText(entry.selection.properties, 'Category') === 'Public, Transportation' &&
+    isTransportBuilding(entry.selection.properties) &&
     sameAddress(entry.selection.properties, properties))
   if (candidates.length === 1) return candidates[0]
   const named = candidates.filter(entry => sameNameAndAddress(entry.selection.properties, properties))
@@ -59,7 +59,7 @@ function isStop(entry: PlaceEntry): boolean {
 
 export function linkedBuildingRoutes(building: PlaceEntry, entries: PlaceEntry[]): PlaceEntry[] {
   if (building.selection.kind !== 'building' || building.geometry.type !== 'Polygon' ||
-      propertyText(building.selection.properties, 'Category') !== 'Public, Transportation') return []
+      !isTransportBuilding(building.selection.properties)) return []
   const rings = building.geometry.coordinates
   const modes = new Set<TransportMode>()
   const facilities: PlaceEntry[] = []
@@ -67,13 +67,14 @@ export function linkedBuildingRoutes(building: PlaceEntry, entries: PlaceEntry[]
     if (entry.selection.kind !== 'poi' || entry.geometry.type !== 'Point' || isStop(entry)) continue
     const category = propertyText(entry.selection.properties, 'Category')
     if (!category.split(',').some(token => /^(Building|Depot)/.test(token.trim()))) continue
-    if (!sameNameAndAddress(building.selection.properties, entry.selection.properties) &&
+    // Exported facility names can differ from renamed or translated buildings.
+    if (!sameAddress(building.selection.properties, entry.selection.properties) &&
         distanceToBuilding(entry.geometry.coordinates, rings) > FACILITY_DISTANCE_METERS) continue
     facilities.push(entry)
     for (const mode of poiModes(category)) modes.add(mode)
   }
   for (const entry of entries) {
-    if (isStop(entry) && sameNameAndAddress(building.selection.properties, entry.selection.properties)) {
+    if (isStop(entry) && sameAddress(building.selection.properties, entry.selection.properties)) {
       for (const mode of poiModes(entry.selection.properties.Category)) modes.add(mode)
     }
   }
@@ -82,7 +83,7 @@ export function linkedBuildingRoutes(building: PlaceEntry, entries: PlaceEntry[]
     if (entry.geometry.type !== 'Point' || !isStop(entry)) return false
     const stopModes = poiModes(entry.selection.properties.Category)
     if (!stopModes.some(mode => modes.has(mode))) return false
-    if (sameNameAndAddress(building.selection.properties, entry.selection.properties) ||
+    if (sameAddress(building.selection.properties, entry.selection.properties) ||
         distanceToBuilding(entry.geometry.coordinates, rings) <= STOP_DISTANCE_METERS) return true
     return facilities.some(facility => sameAddress(facility.selection.properties, entry.selection.properties) &&
       poiModes(facility.selection.properties.Category).some(mode => stopModes.includes(mode)))

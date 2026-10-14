@@ -20,6 +20,13 @@ export function routeMode(transport: unknown): TransportMode | null {
   return typeof transport === 'string' ? routeModes[transport] ?? null : null
 }
 
+export function isTransportBuilding(properties: Record<string, unknown>): boolean {
+  const category = properties.Category
+  if (typeof category !== 'string') return false
+  const tokens = category.split(',').map(token => token.trim())
+  return tokens.includes('Public') && tokens.includes('Transportation')
+}
+
 export function poiModes(category: unknown): TransportMode[] {
   if (typeof category !== 'string') return []
   const tokens = category.split(',').map(token => token.trim())
