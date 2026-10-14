@@ -1,9 +1,11 @@
 import type { Feature, FeatureCollection, Point, Polygon } from 'geojson'
 import { normalizeText, propertyText } from '../data/building-name'
+import { BUILDING_ICON_COLORS, buildingIcon } from './building-icons'
+import { hoverColor } from './hover-color'
 
-export type BuildingPlace = Feature<Polygon, { label: string; tier: number; sortKey: number;
-  addressKey: string; category: string }>
-export type BuildingPlaces = FeatureCollection<Polygon, BuildingPlace['properties']>
+export type BuildingPlace = Feature<Point, { label: string; tier: number; sortKey: number;
+  addressKey: string; category: string; icon: string; color: string; hoverColor: string; pressColor: string }>
+export type BuildingPlaces = FeatureCollection<Point, BuildingPlace['properties']>
 
 const METERS_PER_DEGREE = 111_320
 const LOCAL_RADIUS = 600
@@ -119,12 +121,23 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
   const features: BuildingPlace[] = []
   for (const item of measured) {
     const properties = item.feature.properties ?? {}
-    const name = propertyText(properties, 'Name')
+    let icon = buildingIcon(properties, item.area)
+    const rawName = propertyText(properties, 'Name')
+    const useBusinessName = (icon === 'restaurant' || icon === 'hotel') &&
+      (!rawName || normalizeText(rawName) === normalizeText(propertyText(properties, 'Zone')))
+    const name = useBusinessName ? propertyText(properties, 'Brand') || propertyText(properties, 'Asset') :
+      rawName || (icon ? propertyText(properties, 'Asset') : '')
     if (!name) continue
     const category = propertyText(properties, 'Category')
+    if (category.split(',').some(token => token.trim() === 'Extension')) continue
+    const isPark = category.split(',').some(token => token.trim() === 'Park')
+    if (isPark && !icon) continue
     let score: number
     let tier: number
-    if (category === 'Property') {
+    if (icon === 'museum' || icon === 'hotel' || icon === 'restaurant' || icon === 'venue') {
+      score = icon === 'museum' || icon === 'venue' ? 110 : icon === 'hotel' ? 100 : 85
+      tier = icon === 'restaurant' ? 2 : 1
+    } else if (category === 'Property') {
       const zoneName = propertyText(properties, 'Zone')
       if (!zoneName || normalizeText(name) === normalizeText(zoneName)) continue
       const metrics = zoneMetrics.get(propertyText(properties, 'Zoning'))
@@ -138,6 +151,15 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
         resident > 0 ? percentile(metrics.residents, resident) : 0,
         employee > 0 ? percentile(metrics.employees, employee) : 0,
       )
+      // A distinctive name alone does not make a landmark. Require rarity and
+      // prominence in both footprint and occupancy within the same zoning group.
+      const zoning = propertyText(properties, 'Zoning').split(',').map(token => token.trim())
+      const landmark = !icon && asset.trim() !== '' && assetCount <= 3 &&
+        zoning.length > 0 && zoning.every(zone => ['Residential', 'Commercial', 'Office'].includes(zone)) &&
+        metrics.areas.length >= 20 && item.area >= 1000 && Math.max(resident, employee) >= 700 &&
+        (areaPercentile >= .95 && capacityPercentile >= .95 ||
+          areaPercentile >= .99 && capacityPercentile >= .8)
+      if (landmark) icon = 'landmark'
       const cellX = Math.floor(item.x / LOCAL_RADIUS)
       const cellY = Math.floor(item.y / LOCAL_RADIUS)
       const localAreas: number[] = []
@@ -157,6 +179,7 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
         pointScore(areaPercentile, .99, .95, 25, 15) +
         pointScore(capacityPercentile, .95, .8, 18, 8) +
         pointScore(localPercentile, .9, .75, 10, 5)
+      if (landmark) score = Math.max(score, 145)
       tier = score >= 145 ? 0 : score >= 120 ? 1 : 2
     } else {
       const kind = publicClass(category)
@@ -174,8 +197,14 @@ export function buildingPlaces(buildings: FeatureCollection<Polygon>): BuildingP
       if (score < 45) continue
       tier = score >= 115 ? 0 : score >= 80 ? 1 : 2
     }
-    features.push({ type: 'Feature', id: item.index, geometry: item.feature.geometry,
-      properties: { label: name, tier, sortKey: -score, addressKey: addressKey(properties), category } })
+    // A single point keeps the symbol anchor stable when the building crosses tile boundaries.
+    features.push({ type: 'Feature', id: item.index,
+      geometry: { type: 'Point', coordinates: center(item.feature.geometry) },
+      properties: { label: isPark && icon !== 'venue' ? '' : name,
+        tier, sortKey: -score, addressKey: addressKey(properties), category,
+        icon: icon ? `building-${icon}` : '', color: icon ? BUILDING_ICON_COLORS[icon] : '#34513f',
+        hoverColor: hoverColor(icon ? BUILDING_ICON_COLORS[icon] : '#34513f'),
+        pressColor: hoverColor(hoverColor(icon ? BUILDING_ICON_COLORS[icon] : '#34513f')) } })
   }
   return { type: 'FeatureCollection', features }
 }

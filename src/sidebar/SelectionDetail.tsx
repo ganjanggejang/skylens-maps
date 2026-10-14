@@ -2,7 +2,7 @@ import type { Selection } from '../data/selection'
 import type { SourceState } from '../data/types'
 import type { PlaceEntry } from '../data/place'
 import { buildingBrand, buildingTitle, normalizeText, propertyText } from '../data/building-name'
-import { routeMode, TRANSPORT } from '../data/transport'
+import { isTransportBuilding, routeMode, TRANSPORT } from '../data/transport'
 import { useI18n } from '../i18n'
 
 const buildingFields = [
@@ -67,7 +67,7 @@ export function SelectionDetail({ selection, routeStops, buildingRoutes, poiStat
     (hasValue(properties.Name) ? formatValue(properties.Name) : `${t(kind)} ${id}`)
   const brand = kind === 'building' ? buildingBrand(properties) : ''
   const listedStops = kind === 'route' ? uniqueRouteStops(routeStops) : []
-  const isTransportBuilding = kind === 'building' && propertyText(properties, 'Category') === 'Public, Transportation'
+  const showBuildingRoutes = kind === 'building' && isTransportBuilding(properties)
   return <section className="detail" aria-label={t('detail')}>
     {kind === 'route' && onBack && <button className="detail-back" type="button" onClick={onBack}>{t('back')}</button>}
     <button className="detail-close" type="button" onClick={onClose} aria-label={t('closeDetail')}>×</button>
@@ -83,7 +83,7 @@ export function SelectionDetail({ selection, routeStops, buildingRoutes, poiStat
       {fields.filter(([key]) => hasValue(properties[key])).map(([key, label]) =>
         <div key={key}><dt>{t(label)}</dt><dd>{formatValue(properties[key], language)}</dd></div>)}
     </dl>
-    {isTransportBuilding && <section className="building-routes" aria-label={t('nearbyRoutes')}>
+    {showBuildingRoutes && <section className="building-routes" aria-label={t('nearbyRoutes')}>
       <h3>{t('nearbyRoutes')} {buildingRoutes.length > 0 && `(${buildingRoutes.length})`}</h3>
       {buildingRoutes.length > 0 ? <ul>{buildingRoutes.map(entry => {
         const mode = routeMode(entry.selection.properties.Transport)

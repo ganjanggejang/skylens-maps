@@ -8,3 +8,5 @@ Before starting implementation changes under `/src`, read and use the
 `build-and-test-src` skill at
 [.agents/skills/build-and-test-src/SKILL.md](.agents/skills/build-and-test-src/SKILL.md)
 throughout implementation and final browser verification.
+
+Do not write tests that depend on data from a specific city. Use synthetic test data instead.

@@ -1,8 +1,25 @@
 import type { FeatureCollection, Point } from 'geojson'
-import type { FilterSpecification, ImageSource, Map as MapLibreMap } from 'maplibre-gl'
+import type { ExpressionSpecification, FilterSpecification, ImageSource, Map as MapLibreMap } from 'maplibre-gl'
 import { TRANSPORT, TRANSPORT_MODES, type TransportMode } from '../data/transport'
 import { depotCategory, isStationMode, type StationMode } from '../data/transport-stations'
 import type { BuildingPlaces } from './place-labels'
+import { registerBuildingIcons } from './building-icons'
+import { hoverColor } from './hover-color'
+
+const HOVERED: ExpressionSpecification = ['boolean', ['feature-state', 'hover'], false]
+const PRESSED: ExpressionSpecification = ['boolean', ['feature-state', 'pressed'], false]
+const PRESS_PROGRESS: ExpressionSpecification = ['coalesce', ['feature-state', 'pressProgress'], 0]
+const PRESS_TRANSITION = { duration: 120, delay: 0 }
+
+function addHoverIconLayer(map: MapLibreMap, id: string, source: string,
+  icon: string | ExpressionSpecification, pressed = false) {
+  map.addLayer({ id, type: 'symbol', source,
+    layout: { 'icon-image': icon, 'icon-allow-overlap': true, 'icon-ignore-placement': true,
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
+    paint: { 'icon-opacity': ['case', pressed ? PRESSED : ['all', HOVERED, ['!', PRESSED]], 1, 0],
+      'icon-opacity-transition': { duration: 0, delay: 0 } },
+  })
+}
 
 export const GROUPS = {
   water: { label: '수역', source: 'water', layers: ['water-raster'], defaultVisible: true, color: '#a6d0dd' },
@@ -140,7 +157,7 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
         filter: ['==', ['get', '_transportMode'], mode],
         layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
         paint: { 'line-color': ['coalesce', ['get', 'Color'], group.color],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 9, 2, 15, 5],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 15, 3.5],
           'line-opacity': 0.9 },
       }, map.getLayer('transport-bus-poi') ? 'transport-bus-poi' : 'selected-building-fill')
     }
@@ -151,7 +168,13 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
         filter: depot ? ['in', depot, ['get', 'Category']] :
           ['in', mode, ['get', '_transportModes']],
         layout: { visibility: 'none' },
-        paint: { 'circle-color': group.color, 'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 3, 15, 6],
+        paint: { 'circle-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+          0, ['case', HOVERED, hoverColor(group.color), group.color], 1, hoverColor(hoverColor(group.color))],
+          'circle-color-transition': PRESS_TRANSITION,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'],
+            10, ['*', 3, ['-', 1, ['*', 0.1, PRESS_PROGRESS]]],
+            15, ['*', 6, ['-', 1, ['*', 0.1, PRESS_PROGRESS]]]],
+          'circle-radius-transition': PRESS_TRANSITION,
           'circle-stroke-color': '#fffdf9', 'circle-stroke-width': 1.5 },
       }, 'selected-building-fill')
     }
@@ -159,15 +182,33 @@ export function addTransportLayers(map: MapLibreMap, source: 'poi' | 'route') {
 }
 
 export function addBuildingPlaceLayer(map: MapLibreMap, places: BuildingPlaces) {
+  registerBuildingIcons(map)
   map.addSource('building-places', { type: 'geojson', data: places })
   map.addLayer({
     id: 'place-building-label', type: 'symbol', source: 'building-places',
     filter: ['==', ['get', 'tier'], 0],
-    layout: { 'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
+    layout: { 'icon-image': ['get', 'icon'], 'icon-optional': false, 'text-optional': false,
+      'icon-allow-overlap': false, 'text-allow-overlap': false,
+      'icon-ignore-placement': false, 'text-ignore-placement': false,
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
+      'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
+      'text-radial-offset': ['case', ['!=', ['get', 'icon'], ''], 1.05, 0],
+      'text-field': ['get', 'label'], 'text-font': ['Segoe UI'],
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
-      'text-max-width': 11, 'text-padding': 5, 'symbol-sort-key': ['get', 'sortKey'] },
-    paint: { 'text-color': '#34513f', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+      'text-max-width': 11,
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
+      'symbol-sort-key': ['get', 'sortKey'] },
+    paint: { 'text-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+      0, ['case', HOVERED, ['get', 'hoverColor'], ['get', 'color']], 1, ['get', 'pressColor']],
+      'text-color-transition': PRESS_TRANSITION,
+      'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 },
+      'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
   })
+  addHoverIconLayer(map, 'place-building-hover', 'building-places',
+    ['case', ['==', ['get', 'icon'], ''], '', ['concat', ['get', 'icon'], '-hover']])
+  addHoverIconLayer(map, 'place-building-pressed', 'building-places',
+    ['case', ['==', ['get', 'icon'], ''], '', ['concat', ['get', 'icon'], '-pressed']], true)
 }
 
 export function setBuildingPlaceTier(map: MapLibreMap, tier: number) {
@@ -177,102 +218,123 @@ export function setBuildingPlaceTier(map: MapLibreMap, tier: number) {
 }
 
 export function addSubwayPlaceLayers(map: MapLibreMap, overviewZoom: number) {
+  // Place subway symbols above building labels so they win collision placement.
   map.addLayer({
     id: 'place-subway-label', type: 'symbol', source: 'subway-stations',
-    minzoom: Math.max(0, overviewZoom - 0.6),
-    layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': true,
-      'icon-optional': true, 'text-optional': true,
+    minzoom: Math.max(0, overviewZoom - 1.6),
+    layout: { 'icon-image': 'subway-station', 'icon-allow-overlap': false,
+      'text-allow-overlap': false, 'icon-ignore-placement': false, 'text-ignore-placement': false,
+      'icon-optional': false, 'text-optional': true,
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08],
       'text-field': ['get', '_mapLabel'], 'text-font': ['Segoe UI'],
       'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 16, 13],
       'text-variable-anchor': ['top', 'bottom', 'left', 'right'], 'text-radial-offset': 1.2,
-      'text-max-width': 10, 'text-padding': 5, 'symbol-sort-key': ['get', '_labelSortKey'] },
-    paint: { 'text-color': '#2b5b9c', 'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
-  }, 'selected-route')
+      'text-max-width': 10,
+      'text-padding': ['interpolate', ['linear'], ['zoom'], 12, 14, 15, 8, 18, 4],
+      'symbol-sort-key': ['get', '_labelSortKey'] },
+    paint: { 'text-color': ['interpolate', ['linear'], PRESS_PROGRESS,
+      0, ['case', HOVERED, hoverColor(TRANSPORT.subway.color), TRANSPORT.subway.color],
+      1, hoverColor(hoverColor(TRANSPORT.subway.color))],
+      'text-color-transition': PRESS_TRANSITION,
+      'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 },
+      'text-halo-color': '#fffdf9', 'text-halo-width': 2 },
+  })
+  addHoverIconLayer(map, 'place-subway-hover', 'subway-stations', 'subway-station-hover')
+  addHoverIconLayer(map, 'place-subway-pressed', 'subway-stations', 'subway-station-pressed', true)
 }
 
 export function addStationLayer(map: MapLibreMap, mode: StationMode, stations: FeatureCollection<Point>) {
-  const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = 48
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error(`Could not draw ${mode} station icon`)
-  const color = TRANSPORT[mode].color
-  context.fillStyle = color
-  context.beginPath()
-  context.arc(24, 24, 22, 0, Math.PI * 2)
-  context.fill()
-  context.strokeStyle = '#fffdf9'
-  context.lineWidth = 3
-  context.stroke()
-  context.fillStyle = '#fffdf9'
-  if (mode === 'ship' || mode === 'ferry') {
-    context.fillRect(19, mode === 'ferry' ? 14 : 18, 10, mode === 'ferry' ? 12 : 8)
-    if (mode === 'ferry') context.fillRect(15, 21, 18, 5)
+  for (const [suffix, color] of [['', TRANSPORT[mode].color], ['-hover', hoverColor(TRANSPORT[mode].color)],
+    ['-pressed', hoverColor(hoverColor(TRANSPORT[mode].color))]]) {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 48
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error(`Could not draw ${mode} station icon`)
+    context.fillStyle = color
     context.beginPath()
-    context.moveTo(10, 27)
-    context.lineTo(38, 27)
-    context.lineTo(33, 35)
-    context.lineTo(16, 35)
-    context.closePath()
+    context.arc(24, 24, 22, 0, Math.PI * 2)
     context.fill()
     context.strokeStyle = '#fffdf9'
-    context.lineWidth = 2
-    context.beginPath()
-    context.moveTo(15, 39)
-    context.quadraticCurveTo(19, 36, 23, 39)
-    context.quadraticCurveTo(27, 42, 32, 38)
+    context.lineWidth = 3
     context.stroke()
-  } else {
-    if (mode === 'tram') {
+    context.fillStyle = '#fffdf9'
+    if (mode === 'ship' || mode === 'ferry') {
+      context.fillRect(19, mode === 'ferry' ? 14 : 18, 10, mode === 'ferry' ? 12 : 8)
+      if (mode === 'ferry') context.fillRect(15, 21, 18, 5)
+      context.beginPath()
+      context.moveTo(10, 27)
+      context.lineTo(38, 27)
+      context.lineTo(33, 35)
+      context.lineTo(16, 35)
+      context.closePath()
+      context.fill()
       context.strokeStyle = '#fffdf9'
       context.lineWidth = 2
       context.beginPath()
-      context.moveTo(19, 8)
-      context.lineTo(24, 12)
-      context.lineTo(29, 8)
+      context.moveTo(15, 39)
+      context.quadraticCurveTo(19, 36, 23, 39)
+      context.quadraticCurveTo(27, 42, 32, 38)
       context.stroke()
-    } else if (mode === 'train') {
-      context.fillRect(18, 9, 12, 2)
+    } else {
+      if (mode === 'tram') {
+        context.strokeStyle = '#fffdf9'
+        context.lineWidth = 2
+        context.beginPath()
+        context.moveTo(19, 8)
+        context.lineTo(24, 12)
+        context.lineTo(29, 8)
+        context.stroke()
+      } else if (mode === 'train') {
+        context.fillRect(18, 9, 12, 2)
+      }
+      context.beginPath()
+      context.roundRect(13, mode === 'subway' || mode === 'train' ? 10 : 12, 22,
+        mode === 'subway' || mode === 'train' ? 25 : 23, 5)
+      context.fill()
+      context.fillStyle = color
+      if (mode === 'subway') context.fillRect(16, 15, 16, 9)
+      else {
+        context.fillRect(16, mode === 'train' ? 15 : 17, 7, 8)
+        context.fillRect(25, mode === 'train' ? 15 : 17, 7, 8)
+      }
+      context.beginPath()
+      context.arc(18, 30, 2, 0, Math.PI * 2)
+      context.fill()
+      context.beginPath()
+      context.arc(30, 30, 2, 0, Math.PI * 2)
+      context.fill()
+      context.strokeStyle = '#fffdf9'
+      context.lineWidth = 2
+      context.beginPath()
+      context.moveTo(17, 38)
+      context.lineTo(31, 38)
+      context.stroke()
     }
-    context.beginPath()
-    context.roundRect(13, mode === 'subway' || mode === 'train' ? 10 : 12, 22,
-      mode === 'subway' || mode === 'train' ? 25 : 23, 5)
-    context.fill()
-    context.fillStyle = color
-    if (mode === 'subway') context.fillRect(16, 15, 16, 9)
-    else {
-      context.fillRect(16, mode === 'train' ? 15 : 17, 7, 8)
-      context.fillRect(25, mode === 'train' ? 15 : 17, 7, 8)
-    }
-    context.beginPath()
-    context.arc(18, 30, 2, 0, Math.PI * 2)
-    context.fill()
-    context.beginPath()
-    context.arc(30, 30, 2, 0, Math.PI * 2)
-    context.fill()
-    context.strokeStyle = '#fffdf9'
-    context.lineWidth = 2
-    context.beginPath()
-    context.moveTo(17, 38)
-    context.lineTo(31, 38)
-    context.stroke()
+    map.addImage(`${mode}-station${suffix}`, context.getImageData(0, 0, 48, 48), { pixelRatio: 2 })
   }
-  map.addImage(`${mode}-station`, context.getImageData(0, 0, 48, 48), { pixelRatio: 2 })
   map.addSource(`${mode}-stations`, { type: 'geojson', data: stations })
   map.addLayer({
     id: `transport-${mode}-poi`, type: 'symbol', source: `${mode}-stations`,
-    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': true,
+    // Rail stations can share an interchange with permanent subway labels.
+    layout: { visibility: 'none', 'icon-image': `${mode}-station`, 'icon-allow-overlap': mode === 'train',
+      'icon-ignore-placement': mode === 'train',
+      'icon-padding': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 6, 18, 3],
       'icon-size': ['interpolate', ['linear'], ['zoom'], 10, 0.72, 15, 1.08] },
+    paint: { 'icon-opacity': ['case', PRESSED, 0, 1], 'icon-opacity-transition': { duration: 0, delay: 0 } },
   }, 'selected-route')
+  if (mode !== 'subway') {
+    addHoverIconLayer(map, `transport-${mode}-hover`, `${mode}-stations`, `${mode}-station-hover`)
+    addHoverIconLayer(map, `transport-${mode}-pressed`, `${mode}-stations`, `${mode}-station-pressed`, true)
+  }
 }
 
 export function setGroupVisibility(map: MapLibreMap, id: GroupId, visible: boolean) {
   const next = ALWAYS_VISIBLE.has(id) ? true : visible
   for (const layerId of GROUPS[id].layers) {
-    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', next ? 'visible' : 'none')
-  }
-  if (id === 'subway' && map.getLayer('place-subway-label')) {
-    map.setLayoutProperty('place-subway-label', 'icon-image', next ? '' : 'subway-station')
+    // Subway station icons stay with their names in place-subway-label, including when routes are shown.
+    const layerVisible = next && layerId !== 'transport-subway-poi'
+    if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', layerVisible ? 'visible' : 'none')
   }
 }
 

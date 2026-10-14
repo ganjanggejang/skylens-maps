@@ -23,7 +23,7 @@ export function addSelectionLayers(map: MapLibreMap) {
   map.addSource('selected-extra', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
   map.addLayer({ id: 'selected-route', type: 'line', source: 'selected-extra',
     filter: ['==', ['get', '_selectionKind'], 'route'],
-    paint: { 'line-color': ['get', 'Color'], 'line-width': 6 } })
+    paint: { 'line-color': ['get', 'Color'], 'line-width': 4 } })
   map.addLayer({ id: 'selected-poi', type: 'circle', source: 'selected-extra',
     filter: ['==', ['get', '_selectionKind'], 'poi'],
     paint: { 'circle-radius': 9, 'circle-color': '#ed8228', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })

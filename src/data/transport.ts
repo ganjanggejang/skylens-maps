@@ -2,13 +2,13 @@ export const TRANSPORT_MODES = ['bus', 'train', 'tram', 'subway', 'ship', 'ferry
 export type TransportMode = typeof TRANSPORT_MODES[number]
 
 export const TRANSPORT = {
-  bus: { label: '버스', color: '#258b72', route: true },
-  train: { label: '기차', color: '#af5962', route: true },
-  tram: { label: '전차', color: '#a16ac6', route: true },
-  subway: { label: '지하철', color: '#5082d1', route: true },
-  ship: { label: '선박', color: '#337c9c', route: true },
-  ferry: { label: '페리', color: '#16a3ad', route: true },
-  air: { label: '항공', color: '#74839e', route: false },
+  bus: { label: '버스', color: '#00a85a', route: true },
+  train: { label: '기차', color: '#ff4d28', route: true },
+  tram: { label: '전차', color: '#b000ff', route: true },
+  subway: { label: '지하철', color: '#006dff', route: true },
+  ship: { label: '선박', color: '#005bce', route: true },
+  ferry: { label: '페리', color: '#00a7bd', route: true },
+  air: { label: '항공', color: '#5364ff', route: false },
 } as const
 
 const routeModes: Record<string, TransportMode> = {
@@ -18,6 +18,13 @@ const routeModes: Record<string, TransportMode> = {
 
 export function routeMode(transport: unknown): TransportMode | null {
   return typeof transport === 'string' ? routeModes[transport] ?? null : null
+}
+
+export function isTransportBuilding(properties: Record<string, unknown>): boolean {
+  const category = properties.Category
+  if (typeof category !== 'string') return false
+  const tokens = category.split(',').map(token => token.trim())
+  return tokens.includes('Public') && tokens.includes('Transportation')
 }
 
 export function poiModes(category: unknown): TransportMode[] {

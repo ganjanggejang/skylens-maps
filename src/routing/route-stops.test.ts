@@ -59,3 +59,21 @@ it('handles an empty line and a line consisting of one zero length segment', () 
   expect(nearbyStops(route([]), entries)).toEqual([])
   expect(nearbyStops(route([[0, 0], [0, 0]]), entries)).toEqual(entries)
 })
+
+it('counts cargo rail stations instead of platforms and excludes passenger platforms', () => {
+  const selected = route([[-0.01, 0], [0.01, 0]], 'Train', 3)
+  selected.selection.properties.Object = 'RouteCargo'
+  const entries = Array.from({ length: 6 }, (_, id) => {
+    const station = Math.floor(id / 2)
+    const entry = stop(id, [-0.005 + station * 0.005, (id + 1) / 111_320], 'StopCargoTrain')
+    entry.selection.properties = { ...entry.selection.properties, Name: `Station ${station}`,
+      Address_District: 'Central', Address_Street: 'Rail Street', Address_Number: station + 1 }
+    return entry
+  })
+  entries.push(stop(6, [0, 0], 'StopPassengerTrain'))
+  expect(nearbyStops(selected, entries).map(entry => entry.selection.sourceFeatureId)).toEqual([0, 1, 2, 3, 4, 5])
+
+  const passenger = route([[-0.01, 0], [0.01, 0]], 'Train', 1)
+  passenger.selection.properties.Object = 'RoutePassenger'
+  expect(nearbyStops(passenger, entries)).toEqual([entries[6]])
+})

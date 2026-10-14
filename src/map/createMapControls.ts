@@ -72,12 +72,12 @@ export function createMapControls(scene: CityMap, onSelection: (next: Selection 
     }
   }
 
-  function selectEntry(entry: PlaceEntry) {
+  function selectEntry(entry: PlaceEntry, preserveAutoTransport = false) {
     const selectedMode = entry.selection.kind === 'route' ? routeMode(entry.selection.properties.Transport) : null
     const poiMode = entry.selection.kind === 'poi' ? poiModes(entry.selection.properties.Category)[0] : null
     const mode = selectedMode ?? poiMode
     if (mode && (entry.selection.kind === 'poi' || mode !== 'air')) {
-      autoTransportModes.delete(mode)
+      if (!preserveAutoTransport) autoTransportModes.delete(mode)
       scene.visibility[mode] = true
       onVisibility({ ...scene.visibility })
       setGroupVisibility(map, mode, true)
@@ -93,7 +93,7 @@ export function createMapControls(scene: CityMap, onSelection: (next: Selection 
   function selectBuildingRoute(entry: PlaceEntry) {
     const building = selection
     if (building?.kind !== 'building') return
-    selectEntry(entry)
+    selectEntry(entry, true)
     returnBuildingId = building.id
     onSelection(selection, returnBuildingId)
   }
