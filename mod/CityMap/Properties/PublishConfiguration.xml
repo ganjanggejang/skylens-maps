@@ -44,9 +44,9 @@ The original SKYLENS MAPS code and artwork are licensed under GPL-3.0-only.
   </LongDescription>
   <Thumbnail Value="Properties/Thumbnail.png" />
   <Tag Value="Code Mod" />
-  <ModVersion Value="0.1.5" />
+  <ModVersion Value="0.1.6" />
   <ChangeLog>
-Added colored areas for parks and commercials, added icons for landmarks, museums, schools and public buildings.
+Fixed map export failures caused by unused terrain rasters. SKYLENS MAPS now exports only Depth.tif for water rendering and no longer requests elevation or world terrain rasters.
   </ChangeLog>
   <GameVersion Value="1.6.*" />
   <Dependency Id="87428" />
