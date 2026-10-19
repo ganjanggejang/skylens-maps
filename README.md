@@ -30,7 +30,7 @@ Directions are estimates, not the game's route planner. The export does not prov
 
 ## Develop locally
 
-The web app uses React, TypeScript, Vite, and MapLibre GL JS. Development requires Node.js 20.19 or newer, the dependencies in `package-lock.json`, and a local Carto export in `exported_files/`. The development preparation script requires the seven GeoJSON files (`Area_Boundary`, `Building_Boundary`, `Network_Boundary`, `Network_Centerline`, `POI_Location`, `Route_Centerline`, and `Zoning_Boundary`, each with `.json`), four GeoTIFFs (`Depth`, `Elevation`, `WorldDepth`, and `WorldElevation`, each with `.tif`), and the exported `Styles/` directory. The in-game mod performs its own export and does not need these files in the repository.
+The web app uses React, TypeScript, Vite, and MapLibre GL JS. Development requires Node.js 20.19 or newer, the dependencies in `package-lock.json`, and a local Carto export in `exported_files/`. The development preparation script requires the seven GeoJSON files (`Area_Boundary`, `Building_Boundary`, `Network_Boundary`, `Network_Centerline`, `POI_Location`, `Route_Centerline`, and `Zoning_Boundary`, each with `.json`), the `Depth.tif` GeoTIFF, and the exported `Styles/` directory. The in-game mod performs its own export and does not need these files in the repository.
 
 ```powershell
 npm ci

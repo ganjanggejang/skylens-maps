@@ -14,7 +14,7 @@ const sources = [
   { file: 'Zoning_Boundary.json', geometry: 'Polygon', required: true },
   { file: 'Network_Boundary.json', geometry: 'Polygon', required: true },
 ]
-const rasters = ['Depth.tif', 'Elevation.tif', 'WorldDepth.tif', 'WorldElevation.tif']
+const rasters = ['Depth.tif']
 
 async function styleFiles(root, prefix = '') {
   const paths = []

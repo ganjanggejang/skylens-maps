@@ -1,8 +1,13 @@
-# SKYLENS MAPS 0.1.5
+# SKYLENS MAPS 0.1.6
 
-Version 0.1.5 adds colored areas for parks and commercials, add icons for landmarks, museums, schools and public buildings.
+Version 0.1.6 fixes map export failures caused by unused terrain rasters.
 
-### Changes in 0.1.5
+### Changes in 0.1.6
+
+- Export and require only Depth.tif for water rendering.
+- Stop requesting unused elevation and world terrain rasters that could prevent map generation.
+
+## Changes in 0.1.5
 
 - Show colored areas for parks and commercials.
 - Add icons for landmarks, museums, schools.
@@ -31,4 +36,4 @@ Version 0.1.5 adds colored areas for parks and commercials, add icons for landma
 
 ## Credits and licenses
 
-Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.5 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps
+Carto is a separate required mod by Chang-Yu Ho, distributed under the MIT License. Its DLL is not included here. The bundled web app uses React, MapLibre GL JS, and the other packages listed with license texts in `THIRD_PARTY_NOTICES.txt`. SKYLENS MAPS original code and artwork are licensed under GPL-3.0-only; see `COPYRIGHT.txt` and `LICENSE.txt`. Corresponding source for 0.1.6 is included as `SOURCE.zip` in the mod package. Project repository: https://github.com/ganjanggejang/skylens-maps

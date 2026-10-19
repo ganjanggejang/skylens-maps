@@ -16,8 +16,8 @@ hashing, and water-mask conversion then run on a worker.
 ## Carto export contract
 
 City Map calls `Carto.Settings.GetOptions()` through the installed Carto assembly,
-then enables every system, feature, vector geometry, available property, and
-raster kind reported by that Carto version. It also enables optional data such
+then enables every system, feature, vector geometry, and available property,
+with Depth as the only raster kind. It also enables optional data such
 as inactive routes and map tile statistics. The export uses GeoJSON, GeoTIFF,
 `{Feature}` filenames, and Int16 rasters so the map can read its core layers.
 These changes apply to this export only; the user's saved Carto settings are
@@ -26,8 +26,12 @@ not changed. The following core files remain required:
 - GeoJSON: `Area_Boundary.json`, `Building_Boundary.json`,
   `Network_Boundary.json`, `Network_Centerline.json`, `POI_Location.json`,
   `Route_Centerline.json`, `Zoning_Boundary.json`.
-- GeoTIFF: `Depth.tif`, `Elevation.tif`, `WorldDepth.tif`,
-  `WorldElevation.tif`.
+- GeoTIFF: `Depth.tif`.
+
+`Elevation.tif`, `WorldDepth.tif`, and `WorldElevation.tif` will be needed for
+future terrain features such as contours and mountain rendering. The current
+mod does not request, require, or log missing terrain rasters. 
+Terrain features should be optional because Carto export error with these 3 files appears frequently among users.
 
 The adapter checks both `ExportResult.FilesWritten` and the actual files. Missing
 core files stop publication. Every additional GeoJSON or GeoTIFF file Carto

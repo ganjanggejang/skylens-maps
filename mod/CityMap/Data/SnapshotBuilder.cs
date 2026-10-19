@@ -30,7 +30,7 @@ namespace CityMap.Data
 
         private static readonly string[] Rasters =
         {
-            "Depth.tif", "Elevation.tif", "WorldDepth.tif", "WorldElevation.tif"
+            "Depth.tif"
         };
 
         internal static SnapshotResult Prepare(string exportDirectory, string snapshotsDirectory,
