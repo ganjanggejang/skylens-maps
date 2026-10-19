@@ -18,7 +18,7 @@ namespace CityMap.Export
 
         private static readonly string[] ExpectedRasters =
         {
-            "Depth.tif", "Elevation.tif", "WorldDepth.tif", "WorldElevation.tif"
+            "Depth.tif"
         };
 
         public void Export(string outputDirectory)
@@ -90,8 +90,9 @@ namespace CityMap.Export
         private static void EnableAll(Assembly carto, object options)
         {
             // The enum and availability table come from the installed Carto version.
-            foreach (var name in new[] { "Systems", "Features", "RasterKinds" })
+            foreach (var name in new[] { "Systems", "Features" })
                 Set(options, name, AllFlags(Get(options, name).GetType()));
+            Set(options, "RasterKinds", Enum.Parse(Get(options, "RasterKinds").GetType(), "Depth"));
             var format = carto.GetType("Carto.IO.FileFormat")
                 ?? throw new TypeLoadException("Carto.IO.FileFormat is unavailable.");
             Set(options, "VectorFormat", Enum.Parse(format, "GeoJSON"));
